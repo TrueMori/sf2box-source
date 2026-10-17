@@ -10,6 +10,7 @@ import {SongDocument} from "./SongDocument";
 import {ExportPrompt} from "./ExportPrompt";
 import {ChangePreset} from "./changes";
 import { Soundfont } from "../synth/soundfont/soundfont";
+import "select2";
 
 
 //namespace beepbox {
