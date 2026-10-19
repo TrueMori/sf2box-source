@@ -502,43 +502,31 @@ export class Soundfont {
         return waves;
     }
 
-    public static getGeneratorsFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): Generator[] {
-        const generators: Generator[] = [];
+    //0 - global preset, 1 - presetzone, 2 - global instrument, 3 - instrumentzone
+    public static getGeneratorsOfLevelFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): Generator[][] {
+        const generators: Generator[][] = [];
         const sf = Soundfont.loadedSoundfonts[soundfontIndex];
         const preset = sf.presets[presetIndex];
-        preset.globalGens.forEach((gen) => generators.push(gen));
+        
+        preset.globalGens.forEach((gen) => generators[0].push(gen));
         for (let pZone of preset.presetZones) {
+            if (pitch >= pZone.minPitch && pitch <= pZone.maxPitch) {
+                pZone.gens.forEach((gen) => generators[1].push(gen));
+            }
+            if (pitch >= pZone.instrument.minPitch && pitch <= pZone.instrument.maxPitch) {
+                pZone.instrument.globalGens.forEach((gen) => generators[2].push(gen));
+            }
             for (let iZone of pZone.instrument.instrumentZones) {
                 if (pitch >= iZone.minPitch && pitch <= iZone.maxPitch) {
-                    pZone.gens.forEach((gen) => generators.push(gen));
-                    pZone.instrument.globalGens.forEach((gen) => generators.push(gen));
-                    iZone.gens.forEach((gen) => generators.push(gen));
+                    iZone.gens.forEach((gen) => generators[3].push(gen));
                 }
             }
         }
-        return generators;
-    }
+        //resolve global and local generators
+        generators.forEach((gen, level) => {
+            if (gen)
+        })
 
-    public static getGeneratorsOfLevelFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number, level: number): Generator[] {
-        const generators: Generator[] = [];
-        const sf = Soundfont.loadedSoundfonts[soundfontIndex];
-        const preset = sf.presets[presetIndex];
-        if (level == 0) {
-            preset.globalGens.forEach((gen) => generators.push(gen));
-        }
-        for (let pZone of preset.presetZones) {
-            if (pitch >= pZone.minPitch && pitch <= pZone.maxPitch && level == 1) {
-                pZone.gens.forEach((gen) => generators.push(gen));
-            }
-            if (pitch >= pZone.minPitch && pitch <= pZone.maxPitch && level == 2) {
-                pZone.instrument.globalGens.forEach((gen) => generators.push(gen));
-            }
-            for (let iZone of pZone.instrument.instrumentZones) {
-                if (pitch >= iZone.minPitch && pitch <= iZone.maxPitch && level == 3) {
-                    iZone.gens.forEach((gen) => generators.push(gen));
-                }
-            }
-        }
         return generators;
     }
 

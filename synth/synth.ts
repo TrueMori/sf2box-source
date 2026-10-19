@@ -11851,6 +11851,7 @@ export class Synth {
             tone.initialNoteFilterInput2 = initialFilterInput2;
         }
     private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
+        const generators = Soundfont.getGeneratorsOfLevelFromMidiPitch(instrumentState.soundfontIndex, instrumentState.soundfontPresetIndex, tone.pitches[0]);
         const sampleIndicies = instrumentState.currSoundfontPitchSampleIndicies.get(tone.pitches[0]);
         const loopMode = instrumentState.currSoundfontPitchSampleMode.get(tone.pitches[0]);
         const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
@@ -11864,6 +11865,10 @@ export class Synth {
 
         if (!currSample)
             return;
+
+        let originalPitch = sInfo.originalPitch;
+        let pitchCorrection = sInfo.pCorrection;
+        
         
         const waveLength = currSample.length;
         const rootFreq = Instrument.frequencyFromPitch(sInfo.originalPitch + sInfo.pCorrection);
