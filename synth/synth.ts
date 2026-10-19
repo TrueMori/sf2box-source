@@ -11862,6 +11862,9 @@ export class Synth {
             ?? 0;
         const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.fineTune.op)
             ?? 0;
+        const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.scaleTuning.op)
+            ?? Soundfont.getGenAmtFromOp(currPresetGens, GENERATORS.scaleTuning.op)
+            ?? 100;
         originalPitch = (originalPitch == 65535) ? 0 : originalPitch;
         const rootFreq = Instrument.frequencyFromPitch(originalPitch + pitchCorrectionCourse + pitchCorrectionFine / 100.0 + sInfo.pCorrection / 100.0);
         console.log(originalPitch, pitchCorrectionCourse, pitchCorrectionFine, sInfo.pCorrection);
@@ -11895,8 +11898,9 @@ export class Synth {
             return a + (b - a) * fraction;
         };
 
+        console.log(scaleTuning);
         let phase: number = tone.phases[0] * waveLength;
-        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq;
+        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq * Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);
         const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 
         const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
