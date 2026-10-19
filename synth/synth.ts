@@ -6,7 +6,7 @@ import { scaleElementsByFactor, inverseRealFourierTransform } from "./FFT";
 import { Deque } from "./Deque";
 import { events } from "../global/Events";
 import { FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist } from "./filtering";
-import { GENERATORS, InstGenerators, PresetGenerators, Soundfont } from "./soundfont/soundfont";
+import { GENERATORS, PresetGenerators, Soundfont } from "./soundfont/soundfont";
 
 
 declare global {
@@ -3471,7 +3471,6 @@ export class Song {
                     //soundfonts can have a lot of presets so we need like a lot more numbers. two should do; 64^2 is, like, a big number.
                     const bigChar = Math.floor(instrument.soundfontPreset / 64);
                     const littleChar = instrument.soundfontPreset % 64;
-                    console.log(bigChar, littleChar);
                     buffer.push(SongTagCode.soundfont, base64IntToCharCode[instrument.soundfont], base64IntToCharCode[bigChar], base64IntToCharCode[littleChar]);
                 } else {
                     throw new Error("Unknown instrument type.");
@@ -11844,18 +11843,13 @@ export class Synth {
     private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
         const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
         const gens: PresetGenerators[] = instrumentState.soundfontGens.get(tone.pitches[0]);
-        console.log(gens);
 
-        //const currPresetGens: PresetGenerators = gens[0];
-        const currInstGens: InstGenerators = gens[0].instGenerators[0] // TODO: allow for multiple instZones and presetZones to play at once
+        const currPresetGens = (gens.length > 0) ? gens[0] : null; // TODO: allow for multiple instZones and presetZones to play at once
+        if (!currPresetGens) return;
+        const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
+        if (!currInstGens) return;
         const sampleIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
         const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
-
-        console.log(sampleIndex);
-
-        if (!sampleIndex)
-            return;
-
         const currSample = sf.chipWaves[sampleIndex];
         const sInfo = sf.sampleInfo[sampleIndex];
 
@@ -11873,7 +11867,7 @@ export class Synth {
         const loopStart = sInfo.loopStart;
         const loopEnd = sInfo.loopEnd;
         const loopRange = loopEnd - loopStart;
-        const canLoop = (loopMode == 1 || loopMode == 3) ? true : false;
+        const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;;
         const applyFilters: Function = Synth.applyFilters;
         let expression: number = +tone.expression;
         const expressionDelta: number = +tone.expressionDelta;
@@ -11884,18 +11878,23 @@ export class Synth {
         const volumeScale = instrumentState.volumeScale;
 
         //originally here because i attepted crossfading, but... nice to have, i guess!
+        //it's linear interpolation, to make it smooth across different speeds.
         const readSample = (position: number): number => { 
             const index = Math.floor(position);
             const fraction = position - index;
-
             const a = currSample[index] ?? 0;
-            const b = currSample[index + 1] ?? a;
+            let nextIndex = index + 1;
+
+            if (canLoop && nextIndex >= loopEnd)
+                nextIndex = loopStart;
+
+            const b = currSample[nextIndex] ?? a;
 
             return a + (b - a) * fraction;
         };
 
         let phase: number = tone.phases[0] * waveLength;
-        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq
+        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq;
         const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 
         const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;

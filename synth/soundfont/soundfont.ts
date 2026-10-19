@@ -699,30 +699,10 @@ export class Soundfont {
     }
 
     public static getGenAmtFromOp(genList: InstGenerators | PresetGenerators, op: number): number | null {
-        //i dont wanna have to write an interface which extends instgens and presetgens so ill just do this
-        if ("instGenerators" in genList) { //we know only presetgenerators has instgenerators
-            const list = genList as InstGenerators;
-            const foundGen = list.gens.find((gen) => gen.op == op);
-            let genDef: GeneratorDef;
-            for (const def in GENERATORS) {
-                if (GENERATORS[def].op == op) {
-                    genDef = GENERATORS[def];
-                    break;
-                }
-            }
-            return foundGen?.amt ?? genDef?.defaultValue ?? null; //if this is null, something has gone wrong.
-        } else {
-            const list = genList as PresetGenerators;
-            const foundGen = list.gens.find((gen) => gen.op == op);
-            let genDef: GeneratorDef;
-            for (const def in GENERATORS) {
-                if (GENERATORS[def].op == op) {
-                    genDef = GENERATORS[def];
-                    break;
-                }
-            }
-            return foundGen?.amt ?? genDef?.defaultValue ?? null;
-        }
+        const gens = genList.gens;
+        const foundGen = gens.find(gen => gen.op === op);
+        const genDef = Object.values(GENERATORS).find(def => def.op === op);
+        return foundGen?.amt ?? genDef?.defaultValue ?? null;
     }
 
     constructor(name: string, presets: Preset[], chipWaves: Float32Array[], rawChipWaves: Float32Array[], rawRawChipWaves: Float32Array[], sampleInfo: SampleInfo[], url: string, success: boolean) {
