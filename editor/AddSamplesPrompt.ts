@@ -36,6 +36,7 @@ export class AddSamplesPrompt {
     private _doc: SongDocument;
     private readonly _entries: SampleEntry[] = [];
     private readonly _entryOptionsDisplayStates: Dictionary<boolean> = {};
+    private readonly _entryOptionsShouldDisplay: Dictionary<boolean> = {};
     private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
     private readonly _okayButton: HTMLButtonElement = button({ class: "okayButton", style: "width: 45%;" }, "Okay");
     private readonly _addSampleButton: HTMLButtonElement = button({ style: "height: auto; min-height: var(--button-size);" }, "Add sample");
@@ -271,12 +272,14 @@ export class AddSamplesPrompt {
         const element: HTMLInputElement = <HTMLInputElement>event.target;
         const entryIndex: number = +(element.dataset.index!);
         this._entries[entryIndex].url = element.value;
+        this._entryOptionsShouldDisplay[entryIndex] = !element.value.includes("sf2");
         const sampleNameElement: HTMLDivElement | null | undefined = element.parentNode?.parentNode?.querySelector(".add-sample-prompt-sample-name");
         if (sampleNameElement != null) {
             const sampleName: string = this._getSampleName(this._entries[entryIndex]);
             sampleNameElement.innerText = sampleName;
             sampleNameElement.title = sampleName;
         }
+        this._render(false);
     }
 
     private _whenSampleRateChanges = (event: Event): void => {
@@ -660,6 +663,8 @@ export class AddSamplesPrompt {
             const canMoveDown: boolean = this._entries.length >= 2 && entryIndex < this._entries.length - 1;
             const entry: SampleEntry = this._entries[entryIndex];
             const optionsVisible: boolean = Boolean(this._entryOptionsDisplayStates[entryIndex]);
+            this._entryOptionsShouldDisplay[entryIndex] = !this._entries[entryIndex].url.includes("sf2");
+            const optionsRender: string = this._entryOptionsShouldDisplay[entryIndex] ? "" : "none";
             const urlInput: HTMLInputElement = input({ style: "flex-grow: 1; margin-left: 1em; width: 100%;", value: entry.url });
             const sampleRateStepper: HTMLInputElement = input({ style: "flex-grow: 1; margin-left: 1em; width: 100%;", type: "number", value: "" + entry.sampleRate, min: "8000", max: "96000", step: "1" });
             const rootKeyStepper: HTMLInputElement = input({ style: "flex-grow: 1; margin-left: 1em; width: 100%;", type: "number", value: "" + entry.rootKey, min: "0", max: Config.maxPitch + Config.pitchesPerOctave, step: "1" });
@@ -687,7 +692,7 @@ export class AddSamplesPrompt {
             const moveUpButton: HTMLButtonElement = button({ style: "height: auto; min-height: var(--button-size); margin-left: 0.5em;" }, SVG.svg({ width: "16", height: "16", viewBox: "-13 -14 26 26", "pointer-events": "none", style: "width: 100%; height: 100%;" }, SVG.path({ d: "M -6 6 L 0 -6 L 6 6 z", fill: ColorConfig.primaryText })));
             const moveDownButton: HTMLButtonElement = button({ style: "height: auto; min-height: var(--button-size); margin-left: 0.5em;" }, SVG.svg({ width: "16", height: "16", viewBox: "-13 -14 26 26", "pointer-events": "none", style: "width: 100%; height: 100%;" }, SVG.path({ d: "M -6 -6 L 6 -6 L 0 6 z", fill: ColorConfig.primaryText })));
             const optionsContainer: HTMLDetailsElement = details(
-                { open: optionsVisible, style: "margin-bottom: 2em; margin-top: 1em;" },
+                { open: optionsVisible, style: `margin-bottom: 2em; margin-top: 1em; display: ${optionsRender};` },
                 summary({ style: "margin-bottom: 1em;" }, "Options"),
                 div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: flex-end; margin-bottom: 0.5em;" },
                     div({ style: `flex-shrink: 0; :text-align: right; color: ${ColorConfig.primaryText};` }, span({ title: "What rate to resample to" }, "Sample rate")),
