@@ -1684,6 +1684,8 @@ export class Instrument {
 				break;
             case InstrumentType.soundfont:
                 this.chord = Config.chords.dictionary["simultaneous"].index;
+                this.soundfont = 0;
+                this.soundfontPreset = 0;
                 break;
             default:
                 throw new Error("Unrecognized instrument type: " + type);
