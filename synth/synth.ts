@@ -11865,14 +11865,15 @@ export class Synth {
         const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.scaleTuning.op)
             ?? Soundfont.getGenAmtFromOp(currPresetGens, GENERATORS.scaleTuning.op)
             ?? 100;
-        originalPitch = (originalPitch == 65535) ? 0 : originalPitch;
-        const rootFreq = Instrument.frequencyFromPitch(originalPitch + pitchCorrectionCourse + pitchCorrectionFine / 100.0 + sInfo.pCorrection / 100.0);
-        console.log(originalPitch, pitchCorrectionCourse, pitchCorrectionFine, sInfo.pCorrection);
+        originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
+        //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
+        //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
+        const rootFreq = Instrument.frequencyFromPitch(originalPitch - pitchCorrectionCourse - pitchCorrectionFine / 100.0 - sInfo.pCorrection / 100.0);
         const waveLength = currSample.length;
         const loopStart = sInfo.loopStart;
         const loopEnd = sInfo.loopEnd;
         const loopRange = loopEnd - loopStart;
-        const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;;
+        const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;
         const applyFilters: Function = Synth.applyFilters;
         let expression: number = +tone.expression;
         const expressionDelta: number = +tone.expressionDelta;
@@ -11898,7 +11899,6 @@ export class Synth {
             return a + (b - a) * fraction;
         };
 
-        console.log(scaleTuning);
         let phase: number = tone.phases[0] * waveLength;
         let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq * Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);
         const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
@@ -11929,7 +11929,7 @@ export class Synth {
         }
 
         tone.phases[0] = phase / waveLength;
-        tone.phaseDeltas[0] = phaseDelta * rootFreq / sInfo.sampleRate;
+        tone.phaseDeltas[0] = phaseDelta * rootFreq / sInfo.sampleRate / Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);;
         tone.expression = expression;
 
         synth.sanitizeFilters(filters);
