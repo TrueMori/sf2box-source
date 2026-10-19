@@ -6,6 +6,8 @@ import { scaleElementsByFactor, inverseRealFourierTransform } from "./FFT";
 import { Deque } from "./Deque";
 import { events } from "../global/Events";
 import { FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist } from "./filtering";
+import { GENERATORS, PresetGenerators, Soundfont } from "./soundfont/soundfont";
+
 
 declare global {
     interface Window {
@@ -243,7 +245,7 @@ const enum SongTagCode {
 	harmonics           = CharCode.H, // added in BeepBox URL version 7
 	stringSustain       = CharCode.I, // added in BeepBox URL version 9
 //	                    = CharCode.J,
-//	                    = CharCode.K,
+    soundfont           = CharCode.K, // added in sf2box
 	pan                 = CharCode.L, // added between 8 and 9, DEPRECATED
 	customChipWave      = CharCode.M, // added in JummBox URL version 1(?) for customChipWave
 	songTitle           = CharCode.N, // added in JummBox URL version 1(?) for songTitle
@@ -1457,6 +1459,8 @@ export class Instrument {
     public modulators: number[] = [];
     public modFilterTypes: number[] = [];
     public invalidModulators: boolean[] = [];
+    public soundfontPreset: number = 0;
+    public soundfont: number = 0;
     constructor(isNoiseChannel: boolean, isModChannel: boolean) {
 
         // @jummbus - My screed on how modulator arrays for instruments work, for the benefit of myself in the future, or whoever else.
@@ -1678,6 +1682,9 @@ export class Instrument {
 				this.pulseWidth = Config.pulseWidthRange - 1;
                 this.decimalOffset = 0;
 				break;
+            case InstrumentType.soundfont:
+                this.chord = Config.chords.dictionary["simultaneous"].index;
+                break;
             default:
                 throw new Error("Unrecognized instrument type: " + type);
         }
@@ -2045,6 +2052,9 @@ export class Instrument {
                 instrumentObject["modSettings"][mod] = this.modulators[mod];
                 instrumentObject["modFilterTypes"][mod] = this.modFilterTypes[mod];
             }
+        } else if (this.type == InstrumentType.soundfont) {
+            instrumentObject["soundfont"] = this.soundfont;
+            instrumentObject["soundfontPreset"] = this.soundfontPreset;
         } else {
             throw new Error("Unrecognized instrument type");
         }
@@ -2580,6 +2590,9 @@ export class Instrument {
                     this.modFilterTypes[mod] = instrumentObject["modFilterTypes"][mod];
                 }
             }
+        } else if (this.type == InstrumentType.soundfont) {
+            this.soundfont = instrumentObject["soundfont"];
+            this.soundfontPreset = instrumentObject["soundfontPreset"];
         }
 
         if (this.type != InstrumentType.mod) {
@@ -3454,6 +3467,11 @@ export class Song {
                     buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain | (instrument.stringSustainType << 5)]);
                 } else if (instrument.type == InstrumentType.mod) {
                     // Handled down below. Could be moved, but meh.
+                } else if (instrument.type == InstrumentType.soundfont) {
+                    //soundfonts can have a lot of presets so we need like a lot more numbers. two should do; 64^2 is, like, a big number.
+                    const bigChar = Math.floor(instrument.soundfontPreset / 64);
+                    const littleChar = instrument.soundfontPreset % 64;
+                    buffer.push(SongTagCode.soundfont, base64IntToCharCode[instrument.soundfont], base64IntToCharCode[bigChar], base64IntToCharCode[littleChar]);
                 } else {
                     throw new Error("Unknown instrument type.");
                 }
@@ -4491,6 +4509,13 @@ export class Song {
                     instrument.decimalOffset = clamp(0, 99 + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 }
 
+            } break;
+            case SongTagCode.soundfont: {
+                const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+                instrument.soundfont = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                const bigChar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                const littleChar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                instrument.soundfontPreset = bigChar * 64 + littleChar;
             } break;
             case SongTagCode.stringSustain: {
                 const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -7549,6 +7574,10 @@ class InstrumentState {
     public reverbShelfPrevInput2: number = 0.0;
     public reverbShelfPrevInput3: number = 0.0;
 
+    public soundfontIndex: number = 0;
+    public soundfontPresetIndex: number = 0;
+    public soundfontGens = new Map<number, PresetGenerators[]>();
+
     //public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
 
     public readonly spectrumWave: SpectrumWaveState = new SpectrumWaveState();
@@ -8171,6 +8200,21 @@ class InstrumentState {
             this.unisonOffset = instrument.unisonOffset;
             this.unisonExpression = instrument.unisonExpression;
             this.unisonSign = instrument.unisonSign;
+        } else if (instrument.type == InstrumentType.soundfont) {
+            this.soundfontIndex = instrument.soundfont;
+            this.soundfontPresetIndex = instrument.soundfontPreset;
+                this.isUsingAdvancedLoopControls = instrument.isUsingAdvancedLoopControls;
+                this.chipWaveLoopStart = instrument.chipWaveLoopStart;
+                this.chipWaveLoopEnd = instrument.chipWaveLoopEnd;
+                this.chipWaveLoopMode = instrument.chipWaveLoopMode;
+                this.chipWavePlayBackwards = instrument.chipWavePlayBackwards;
+                this.chipWaveStartOffset = instrument.chipWaveStartOffset;
+
+                this.unisonVoices = instrument.unisonVoices;
+                this.unisonSpread = instrument.unisonSpread;
+                this.unisonOffset = instrument.unisonOffset;
+                this.unisonExpression = instrument.unisonExpression;
+                this.unisonSign = instrument.unisonSign;
         } else if (instrument.type == InstrumentType.drumset) {
             for (let i: number = 0; i < Config.drumCount; i++) {
                 this.drumsetSpectrumWaves[i].getCustomWave(instrument.drumsetSpectrumWaves[i], InstrumentState._drumsetIndexToSpectrumOctave(i));
@@ -10085,6 +10129,12 @@ export class Synth {
             for (let instrumentIndex: number = 0; instrumentIndex < channel.instruments.length; instrumentIndex++) {
                 const instrumentState: InstrumentState = channelState.instruments[instrumentIndex];
                 const toneList: Deque<Tone> = instrumentState.activeTones;
+
+                // This is always determined in computeTone, so we have to clear it here before the next compute.
+                if (instrumentState.type == InstrumentType.soundfont) {
+                    instrumentState.soundfontGens.clear();
+                }
+
                 let toneCount: number = 0;
                 if ((note != null) && (!song.patternInstruments || (pattern!.instruments.indexOf(instrumentIndex) != -1))) {
                     const instrument: Instrument = channel.instruments[instrumentIndex];
@@ -10431,6 +10481,14 @@ export class Synth {
             expressionReferencePitch = 0;
             pitchDamping = 1.0;
             basePitch = 0;
+        } else if (instrument.type == InstrumentType.soundfont) {
+            //let sampleInfo = Soundfont.loadedSoundfonts[instrument.soundfont].sampleInfo
+            //let currSample = Soundfont.getSamplesFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0])[0];
+            baseExpression = Config.soundfontBaseExpression;
+
+            const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
+
+            instrumentState.soundfontGens.set(tone.pitches[0], gens);
         } else {
             throw new Error("Unknown instrument type in computeTone.");
         }
@@ -11439,7 +11497,9 @@ export class Synth {
 				Synth.fm6SynthFunctionCache[fingerprint] = new Function("Config", "Synth", wrappedFm6Synth)(Config, Synth);
             }
             return Synth.fm6SynthFunctionCache[fingerprint];
-        }else{
+        } else if (instrument.type == InstrumentType.soundfont) {
+            return Synth.soundfontSynth;
+        } else {
             throw new Error("Unrecognized instrument type: " + instrument.type);
         }
     }
@@ -11780,6 +11840,103 @@ export class Synth {
             tone.initialNoteFilterInput1 = initialFilterInput1;
             tone.initialNoteFilterInput2 = initialFilterInput2;
         }
+    private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
+        const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
+        const gens: PresetGenerators[] = instrumentState.soundfontGens.get(tone.pitches[0]);
+
+        const currPresetGens = (gens.length > 0) ? gens[0] : null; // TODO: allow for multiple instZones and presetZones to play at once
+        if (!currPresetGens) return;
+        const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
+        if (!currInstGens) return;
+        const sIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
+        const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
+        const currSample = sf.chipWaves[sIndex];
+        const sInfo = sf.sampleInfo[sIndex];
+
+        if (!currSample)
+            return;
+
+        let originalPitch = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.overridingRootKey.op)
+            ?? sInfo.originalPitch;
+        const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.coarseTune.op)
+            ?? 0;
+        const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.fineTune.op)
+            ?? 0;
+        const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.scaleTuning.op)
+            ?? Soundfont.getGenAmtFromOp(currPresetGens, GENERATORS.scaleTuning.op)
+            ?? 100;
+        originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
+        //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
+        //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
+        const rootFreq = Instrument.frequencyFromPitch(originalPitch - pitchCorrectionCourse - pitchCorrectionFine / 100.0 - sInfo.pCorrection / 100.0);
+        const waveLength = currSample.length;
+        const loopStart = sInfo.loopStart;
+        const loopEnd = sInfo.loopEnd;
+        const loopRange = loopEnd - loopStart;
+        const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;
+        const applyFilters: Function = Synth.applyFilters;
+        let expression: number = +tone.expression;
+        const expressionDelta: number = +tone.expressionDelta;
+        let initialFilterInput1: number = +tone.initialNoteFilterInput1;
+        let initialFilterInput2: number = +tone.initialNoteFilterInput2;
+        const filters: DynamicBiquadFilter[] = tone.noteFilters;
+        const filterCount: number = tone.noteFilterCount | 0;
+        const volumeScale = instrumentState.volumeScale;
+
+        //originally here because i attepted crossfading, but... nice to have, i guess!
+        //it's linear interpolation, to make it smooth across different speeds.
+        const readSample = (position: number): number => { 
+            const index = Math.floor(position);
+            const fraction = position - index;
+            const a = currSample[index] ?? 0;
+            let nextIndex = index + 1;
+
+            if (canLoop && nextIndex >= loopEnd)
+                nextIndex = loopStart;
+
+            const b = currSample[nextIndex] ?? a;
+
+            return a + (b - a) * fraction;
+        };
+
+        let phase: number = tone.phases[0] * waveLength;
+        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq * Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);
+        const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
+
+        const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
+        const stopIndex: number = bufferIndex + roundedSamplesPerTick;
+
+        for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+            let inputSample: number = 0;
+
+            if (canLoop && phase >= loopEnd) {
+                phase = loopStart + ((phase - loopStart) % loopRange);
+            }
+            
+            inputSample = readSample(phase);
+
+            const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
+            const output: number = sample * expression;
+            
+            data[sampleIndex] += output
+            
+            initialFilterInput2 = initialFilterInput1;
+            initialFilterInput1 = inputSample * volumeScale;
+
+            phase += phaseDelta;
+            phaseDelta *= phaseDeltaScale;
+            expression += expressionDelta;
+        }
+
+        tone.phases[0] = phase / waveLength;
+        tone.phaseDeltas[0] = phaseDelta * rootFreq / sInfo.sampleRate / Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);;
+        tone.expression = expression;
+
+        synth.sanitizeFilters(filters);
+        tone.initialNoteFilterInput1 = initialFilterInput1;
+        tone.initialNoteFilterInput2 = initialFilterInput2;
+    }
+
     private static chipSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
         const aliases: boolean = (effectsIncludeDistortion(instrumentState.effects) && instrumentState.aliases);
         const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
@@ -11793,7 +11950,7 @@ export class Synth {
         let phaseDeltaA: number = tone.phaseDeltas[0] * waveLength;
         let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
         const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
-        const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1];
+        const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1]; 
         let expression: number = +tone.expression;
         const expressionDelta: number = +tone.expressionDelta;
         let phaseA: number = (tone.phases[0] % 1) * waveLength;
