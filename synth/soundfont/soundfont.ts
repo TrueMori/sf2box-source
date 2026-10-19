@@ -8,21 +8,95 @@
 
 import { Dictionary, performIntegral } from "../SynthConfig"
 
-export const OPS: Dictionary<number> = {
-    instrument: 41,
-    keyRange: 43,
-    coarseTune: 51,
-    fineTune: 52,
-    sampleID: 53,
-    sampleMode: 54,
-    overridingRootKey: 58,
-}
-
 enum sampleMode { //loop types
     noLoop,
     continuousLoop,
     unused,
     loopUntilEnd,
+}
+
+enum GeneratorCombination {
+    additive,
+    range, 
+    substitution,
+    sampleOffset,
+    sampleMode,
+    sampleRootKey,
+    exclusiveClass,
+    index,
+    reserved,
+}
+
+export const GENERATORS: Dictionary<GeneratorDef> = {
+    startAddrsOffset:           { op: 0,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    endAddrsOffset:             { op: 1,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    startloopAddrsOffset:       { op: 2,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    endloopAddrsOffset:         { op: 3,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    startAddrsCoarseOffset:     { op: 4,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    modLfoToPitch:              { op: 5,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    vibLfoToPitch:              { op: 6,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    modEnvToPitch:              { op: 7,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    initialFilterFc:            { op: 8,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 13500 },
+    initialFilterQ:             { op: 9,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    modLfoToFilterFc:           { op: 10, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    modEnvToFilterFc:           { op: 11, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    endAddrsCoarseOffset:       { op: 12, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    modLfoToVolume:             { op: 13, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    unused1:                    { op: 14, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    chorusEffectsSend:          { op: 15, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    reverbEffectsSend:          { op: 16, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    pan:                        { op: 17, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    unused2:                    { op: 18, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    unused3:                    { op: 19, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    unused4:                    { op: 20, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    delayModLFO:                { op: 21, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    freqModLFO:                 { op: 22, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    delayVibLFO:                { op: 23, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    freqVibLFO:                 { op: 24, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    delayModEnv:                { op: 25, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    attackModEnv:               { op: 26, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    holdModEnv:                 { op: 27, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    decayModEnv:                { op: 28, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    sustainModEnv:              { op: 29, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    releaseModEnv:              { op: 30, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    keynumToModEnvHold:         { op: 31, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    keynumToModEnvDecay:        { op: 32, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    delayVolEnv:                { op: 33, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    attackVolEnv:               { op: 34, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    holdVolEnv:                 { op: 35, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    decayVolEnv:                { op: 36, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    sustainVolEnv:              { op: 37, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    releaseVolEnv:              { op: 38, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
+    keynumToVolEnvHold:         { op: 39, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    keynumToVolEnvDecay:        { op: 40, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    instrument:                 { op: 41, presetAllowed: true,  instrumentAllowed: false, type: GeneratorCombination.index,            defaultValue: null },
+    unused5:                    { op: 42, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    keyRange:                   { op: 43, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,            defaultValue: 32512 },
+    velRange:                   { op: 44, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,            defaultValue: 32512 },
+    startloopAddrsCoarseOffset: { op: 45, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    keynum:                     { op: 46, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.substitution,     defaultValue: -1 },
+    velocity:                   { op: 47, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.substitution,     defaultValue: -1 },
+    initialAttenuation:         { op: 48, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    unused6:                    { op: 49, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    endloopAddrsCoarseOffset:   { op: 50, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
+    coarseTune:                 { op: 51, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    fineTune:                   { op: 52, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
+    sampleID:                   { op: 53, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.index,            defaultValue: null },
+    sampleModes:                { op: 54, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleMode,        defaultValue: 0 },
+    unused7:                    { op: 55, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    scaleTuning:                { op: 56, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 100 },
+    exclusiveClass:             { op: 57, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.exclusiveClass,    defaultValue: 0 },
+    overridingRootKey:          { op: 58, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleRootKey,     defaultValue: null },
+    unused8:                    { op: 59, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    endOper:                    { op: 60, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+} as const;
+
+interface GeneratorDef {
+    op: number,
+    presetAllowed: boolean,
+    instrumentAllowed: boolean,
+    type: GeneratorCombination,
+    defaultValue: number,
 }
 
 interface Instrument {
@@ -73,7 +147,7 @@ interface Bag {
     modIndex: number
 }
 
-export interface Generator {
+interface Generator {
     op: number
     amt: number
 }
@@ -81,6 +155,15 @@ export interface Generator {
 interface TypeInfo {
     name: string,
     bagIndex: number,
+}
+
+export interface InstGenerators {
+    gens: Generator[],
+}
+
+export interface PresetGenerators {
+    gens: Generator[],
+    instGenerators: InstGenerators[],
 }
 
 interface PHDR extends TypeInfo { //these are just for organization
@@ -330,8 +413,8 @@ export class Soundfont {
                     });
                     const mnPitch = this.getKeyRange(zoneGens)[0];
                     const mxPitch = this.getKeyRange(zoneGens)[1];
-                    const sampleIndex = this.getGensOfType(zoneGens, OPS.sampleID)[0];
-                    const loopType = this.getGensOfType(zoneGens, OPS.sampleMode);
+                    const sampleIndex = this.getGensOfType(zoneGens, GENERATORS.sampleID.op)[0];
+                    const loopType = this.getGensOfType(zoneGens, GENERATORS.sampleModes.op);
                     instrumentZones.push({
                         minPitch: mnPitch,
                         maxPitch: mxPitch,
@@ -363,7 +446,7 @@ export class Soundfont {
                     const zoneGens = this.getPresetBagGenerators(pbag, pgen, i);
                     const mnPitch = this.getKeyRange(zoneGens)[0];  
                     const mxPitch = this.getKeyRange(zoneGens)[1];
-                    const instIndex = this.getGensOfType(zoneGens, OPS.instrument)[0];
+                    const instIndex = this.getGensOfType(zoneGens, GENERATORS.instrument.op)[0];
                     const instrument = instruments[instIndex];
                     presetZones.push({
                         minPitch: mnPitch,
@@ -406,7 +489,7 @@ export class Soundfont {
             generators.push(gens[i]);
         }
 
-        if (!generators.find((gen) => gen.op == OPS.sampleID)) { //global zones are those which dont have one
+        if (!generators.find((gen) => gen.op == GENERATORS.sampleID.op)) { //global zones are those which dont have one
             generators.push({op: 0, amt: 0}); //this will break if we have no generators with a global zone. kind of a hacky solution but lmao
             return generators;
         } else {
@@ -423,7 +506,7 @@ export class Soundfont {
             generators.push(gens[i]);
         }
 
-        if (!generators.find((gen) => gen.op == OPS.instrument)) { //same here
+        if (!generators.find((gen) => gen.op == GENERATORS.instrument.op)) { //same here
             generators.push({op: 0, amt: 0});
             return generators;
         } else {
@@ -456,7 +539,7 @@ export class Soundfont {
     }
 
     private static getKeyRange(instGens: Generator[]): number[] { //minimum and maximum respectively
-        let keyRangeGen = this.getGensOfType(instGens, OPS.keyRange);
+        let keyRangeGen = this.getGensOfType(instGens, GENERATORS.keyRange.op);
         if (keyRangeGen.length > 0) {
             let gen = keyRangeGen[0]; //will only be one in the array if it exists
             let high = (gen >>> 8) & 0xFF;
@@ -477,6 +560,26 @@ export class Soundfont {
         return result;
     }
 
+    private static getGenDef(gen: Generator): GeneratorDef {
+        for (const presetGen in GENERATORS) {
+            if (GENERATORS[presetGen].op == gen.op) {
+                return GENERATORS[presetGen];
+            }
+        }
+        return GENERATORS.unused;
+    }
+
+    private static getRangeTypeValues(amt: number): number[] {
+        let high = (amt >>> 8) & 0xFF;
+        let low = amt & 0xFF;
+        return [low, high];
+    }
+
+    private static setRangeTypeValues(gen: Generator, range: number[]): void {
+        let encoded = ((range[1] & 0xFF) << 8) | (range[0] & 0xFF);
+        gen.amt = encoded;
+    }
+
     public static getAllPresetSamples(soundfontIndex: number, presetIndex: number): number[] {
         const waves: number[] = [];
         const sf = Soundfont.loadedSoundfonts[soundfontIndex];
@@ -488,46 +591,138 @@ export class Soundfont {
         return waves;
     }
 
-    public static getSamplesFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): number[] {
-        const waves: number[] = [];
-        const sf = Soundfont.loadedSoundfonts[soundfontIndex];
-        const preset = sf.presets[presetIndex];
-        for (let pZone of preset.presetZones) {
-            for (let iZone of pZone.instrument.instrumentZones) {
-                if (pitch >= iZone.minPitch && pitch <= iZone.maxPitch) {
-                    waves.push(iZone.sampleIndex);
-                }   
-            }
+    private static resolveGlobalAndZoneGen(globalGen: Generator | null, zoneGen: Generator): Generator {
+        const genDef = this.getGenDef(zoneGen); //assuming theyre the same op
+        if (genDef.type == GeneratorCombination.range && globalGen) {
+            const globalRange = this.getRangeTypeValues(globalGen.amt);
+            const zoneRange = this.getRangeTypeValues(zoneGen.amt);
+            const newRange: number[] = [Math.max(globalRange[0], zoneRange[0]), Math.min(globalRange[1], zoneRange[1])];
+            const returnGen: Generator = {op: globalGen.op, amt: 0};
+            this.setRangeTypeValues(returnGen, newRange);
+            return returnGen;
+        } else {
+            return zoneGen;
         }
-        return waves;
     }
 
-    //0 - global preset, 1 - presetzone, 2 - global instrument, 3 - instrumentzone
-    public static getGeneratorsOfLevelFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): Generator[][] {
-        const generators: Generator[][] = [];
+    private static resolvePresetAndInstGen(presetGen: Generator, instGen: Generator): Generator {
+        const genDef = this.getGenDef(presetGen); //assuming theyre the same op
+        if (genDef.type == GeneratorCombination.range) {
+            const presetRange = this.getRangeTypeValues(presetGen.amt);
+            const instRange = this.getRangeTypeValues(instGen.amt);
+            const newRange: number[] = [Math.max(presetRange[0], instRange[0]), Math.min(presetRange[1], instRange[1])];
+            const returnGen: Generator = {op: presetGen.op, amt: 0};
+            this.setRangeTypeValues(returnGen, newRange);
+            return returnGen;
+        } else if (genDef.type == GeneratorCombination.additive) { 
+            return {op: presetGen.op, amt: presetGen.amt + instGen.amt};
+        } else { //otherwise it's invalid, so we should just return the instrument generator safely.
+            return instGen;
+        }
+    }
+
+    //For clarity, as I especially dont want to forget what this function returns:
+    //PresetGenerators[] is an array of the generators for each presetZone, with global generators included and resolved in each zone.
+    //Then, in each presetGenerator, we get the instrumentZoneGenerators, which is the same, but it also resolves instrument and preset generators.
+    //We still want them seperate, but having already accounted for everything at each level makes the other code a lot easier to read.
+    public static getGeneratorsOfLevelsFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): PresetGenerators[] {
+        //generators suck like damn
+        const generators: PresetGenerators[] = [];
+
         const sf = Soundfont.loadedSoundfonts[soundfontIndex];
         const preset = sf.presets[presetIndex];
         
-        preset.globalGens.forEach((gen) => generators[0].push(gen));
-        for (let pZone of preset.presetZones) {
-            if (pitch >= pZone.minPitch && pitch <= pZone.maxPitch) {
-                pZone.gens.forEach((gen) => generators[1].push(gen));
+        //Get generators of each type
+        const globalPresetGens = new Map<number, number>(); //global preset gens
+        preset.globalGens.forEach((gen) => globalPresetGens.set(gen.op, gen.amt));
+        for (const pZone of preset.presetZones) {
+            if (pitch < Math.max(pZone.minPitch, preset.minPitch) || pitch > Math.min(pZone.maxPitch, preset.maxPitch))
+                continue;
+            const presetZoneGens = new Map(globalPresetGens);
+            const presetGens: Generator[] = [];
+            
+            //resolve global and zone gens (not all gens just override the global)
+            pZone.gens.forEach((gen) => {
+                let globalGen: Generator | null = globalPresetGens.has(gen.op) ? {op: gen.op, amt: globalPresetGens.get(gen.op)} : null;
+                const resolved = this.resolveGlobalAndZoneGen(globalGen, gen)
+                presetZoneGens.set(resolved.op, resolved.amt);
+            });
+            presetZoneGens.forEach((amt, op) => presetGens.push({op: op, amt: amt}));
+
+            const globalInstGens = new Map<number, number>(); //global inst gens
+            const instGens: InstGenerators[] = [];
+            const instrument = pZone.instrument;
+            instrument.globalGens.forEach((gen) => globalInstGens.set(gen.op, gen.amt));
+            for (const iZone of pZone.instrument.instrumentZones) {
+                if (pitch < Math.max(iZone.minPitch, instrument.minPitch) || pitch > Math.min(iZone.maxPitch, instrument.maxPitch))
+                    continue;
+                const iGens: Generator[] = [];
+                const instZoneGens = new Map(globalInstGens);
+
+                //resolve global and zone gens
+                iZone.gens.forEach((gen) => {
+                    let globalGen: Generator | null = globalInstGens.has(gen.op) ? {op: gen.op, amt: globalInstGens.get(gen.op)} : null;
+                    const resolved = this.resolveGlobalAndZoneGen(globalGen, gen)
+                    instZoneGens.set(resolved.op, resolved.amt);
+                });
+                instZoneGens.forEach((amt, op) => iGens.push({op: op, amt: amt}));
+                
+                //resolve preset and inst gens
+                presetGens.forEach((gen) => {
+                    const genDef = this.getDefFromGenerator(gen);
+                    if (!genDef?.instrumentAllowed) return;
+
+                    const instGenIndex: number = iGens.findIndex((g) => gen.op == g.op);
+                    if (instGenIndex > -1) {
+                        const resolved: Generator = this.resolvePresetAndInstGen(gen, iGens[instGenIndex]);
+                        iGens[instGenIndex] = resolved;
+                    } else {
+                        iGens.push(gen);
+                    }
+                });
+
+                instGens.push({gens: iGens});
             }
-            if (pitch >= pZone.instrument.minPitch && pitch <= pZone.instrument.maxPitch) {
-                pZone.instrument.globalGens.forEach((gen) => generators[2].push(gen));
-            }
-            for (let iZone of pZone.instrument.instrumentZones) {
-                if (pitch >= iZone.minPitch && pitch <= iZone.maxPitch) {
-                    iZone.gens.forEach((gen) => generators[3].push(gen));
-                }
-            }
+            if (instGens.length > 0)
+                generators.push({gens: presetGens, instGenerators: instGens});
         }
-        //resolve global and local generators
-        generators.forEach((gen, level) => {
-            if (gen)
-        })
 
         return generators;
+    }
+
+    public static getDefFromGenerator(gen: Generator): GeneratorDef | null {
+        for (const gDef in GENERATORS) {
+            if (GENERATORS[gDef].op == gen.op)
+                return GENERATORS[gDef];
+        }
+        return null;
+    }
+
+    public static getGenAmtFromOp(genList: InstGenerators | PresetGenerators, op: number): number | null {
+        //i dont wanna have to write an interface which extends instgens and presetgens so ill just do this
+        if ("instGenerators" in genList) { //we know only presetgenerators has instgenerators
+            const list = genList as InstGenerators;
+            const foundGen = list.gens.find((gen) => gen.op == op);
+            let genDef: GeneratorDef;
+            for (const def in GENERATORS) {
+                if (GENERATORS[def].op == op) {
+                    genDef = GENERATORS[def];
+                    break;
+                }
+            }
+            return foundGen?.amt ?? genDef?.defaultValue ?? null; //if this is null, something has gone wrong.
+        } else {
+            const list = genList as PresetGenerators;
+            const foundGen = list.gens.find((gen) => gen.op == op);
+            let genDef: GeneratorDef;
+            for (const def in GENERATORS) {
+                if (GENERATORS[def].op == op) {
+                    genDef = GENERATORS[def];
+                    break;
+                }
+            }
+            return foundGen?.amt ?? genDef?.defaultValue ?? null;
+        }
     }
 
     constructor(name: string, presets: Preset[], chipWaves: Float32Array[], rawChipWaves: Float32Array[], rawRawChipWaves: Float32Array[], sampleInfo: SampleInfo[], url: string, success: boolean) {

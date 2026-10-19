@@ -6,7 +6,7 @@ import { scaleElementsByFactor, inverseRealFourierTransform } from "./FFT";
 import { Deque } from "./Deque";
 import { events } from "../global/Events";
 import { FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist } from "./filtering";
-import { OPS, Soundfont } from "./soundfont/soundfont";
+import { GENERATORS, InstGenerators, PresetGenerators, Soundfont } from "./soundfont/soundfont";
 
 
 declare global {
@@ -4516,7 +4516,6 @@ export class Song {
                 instrument.soundfont = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                 const bigChar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                 const littleChar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                console.log(bigChar, littleChar);
                 instrument.soundfontPreset = bigChar * 64 + littleChar;
             } break;
             case SongTagCode.stringSustain: {
@@ -7576,10 +7575,9 @@ class InstrumentState {
     public reverbShelfPrevInput2: number = 0.0;
     public reverbShelfPrevInput3: number = 0.0;
 
-    public currSoundfontPitchSampleIndicies: Map<number, number[]> = new Map<number, number[]>;
-    public currSoundfontPitchSampleMode: Map<number, number> = new Map<number, number>;
     public soundfontIndex: number = 0;
     public soundfontPresetIndex: number = 0;
+    public soundfontGens = new Map<number, PresetGenerators[]>();
 
     //public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
 
@@ -10135,8 +10133,7 @@ export class Synth {
 
                 // This is always determined in computeTone, so we have to clear it here before the next compute.
                 if (instrumentState.type == InstrumentType.soundfont) {
-                    instrumentState.currSoundfontPitchSampleIndicies.clear();
-                    instrumentState.currSoundfontPitchSampleMode.clear();
+                    instrumentState.soundfontGens.clear();
                 }
 
                 let toneCount: number = 0;
@@ -10490,15 +10487,9 @@ export class Synth {
             //let currSample = Soundfont.getSamplesFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0])[0];
             baseExpression = Config.soundfontBaseExpression;
 
+            const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
 
-            const sampleIndicies = Soundfont.getSamplesFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
-            const gInstrumentGens = Soundfont.getGeneratorsOfLevelFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0], 2);
-            const lInstrumentGens = Soundfont.getGeneratorsOfLevelFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0], 3);
-
-            const loopMode = lInstrumentGens.find((gen) => gen.op == OPS.sampleMode)?.amt ?? gInstrumentGens.find((gen) => gen.op == OPS.sampleMode)?.amt ?? 0;
-
-            instrumentState.currSoundfontPitchSampleIndicies.set(tone.pitches[0], sampleIndicies);
-            instrumentState.currSoundfontPitchSampleMode.set(tone.pitches[0], loopMode);
+            instrumentState.soundfontGens.set(tone.pitches[0], gens);
         } else {
             throw new Error("Unknown instrument type in computeTone.");
         }
@@ -11851,27 +11842,34 @@ export class Synth {
             tone.initialNoteFilterInput2 = initialFilterInput2;
         }
     private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
-        const generators = Soundfont.getGeneratorsOfLevelFromMidiPitch(instrumentState.soundfontIndex, instrumentState.soundfontPresetIndex, tone.pitches[0]);
-        const sampleIndicies = instrumentState.currSoundfontPitchSampleIndicies.get(tone.pitches[0]);
-        const loopMode = instrumentState.currSoundfontPitchSampleMode.get(tone.pitches[0]);
         const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
-        //const sampleGens = Soundfont.getGeneratorsFromMidiPitch(instrumentState.soundfontIndex, instrumentState.soundfontPresetIndex, tone.pitches[0]);
+        const gens: PresetGenerators[] = instrumentState.soundfontGens.get(tone.pitches[0]);
+        console.log(gens);
 
-        if (!sampleIndicies)
+        //const currPresetGens: PresetGenerators = gens[0];
+        const currInstGens: InstGenerators = gens[0].instGenerators[0] // TODO: allow for multiple instZones and presetZones to play at once
+        const sampleIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
+        const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
+
+        console.log(sampleIndex);
+
+        if (!sampleIndex)
             return;
 
-        const currSample = sf.chipWaves[sampleIndicies[0]]; // TODO: allow for multiple samples to play at once
-        const sInfo = sf.sampleInfo[sampleIndicies[0]];
+        const currSample = sf.chipWaves[sampleIndex];
+        const sInfo = sf.sampleInfo[sampleIndex];
 
         if (!currSample)
             return;
 
-        let originalPitch = sInfo.originalPitch;
-        let pitchCorrection = sInfo.pCorrection;
-        
-        
+        const originalPitch = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.overridingRootKey.op)
+            ?? sInfo.originalPitch;
+        const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.coarseTune.op)
+            ?? 0;
+        const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.fineTune.op)
+            ?? 0;
+        const rootFreq = Instrument.frequencyFromPitch(originalPitch + pitchCorrectionCourse + pitchCorrectionFine / 100 + sInfo.pCorrection / 100);
         const waveLength = currSample.length;
-        const rootFreq = Instrument.frequencyFromPitch(sInfo.originalPitch + sInfo.pCorrection);
         const loopStart = sInfo.loopStart;
         const loopEnd = sInfo.loopEnd;
         const loopRange = loopEnd - loopStart;
