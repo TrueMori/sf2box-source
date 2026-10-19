@@ -1,6 +1,6 @@
 // Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import { startLoadingSample, sampleLoadingState, SampleLoadingState, sampleLoadEvents, SampleLoadedEvent, SampleLoadingStatus, loadBuiltInSamples, Dictionary, DictionaryArray, toNameMap, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegralOld, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb, OperatorWave, bundledSamplePacks } from "./SynthConfig";
+import { startLoadingSample, startLoadingSoundfont, sampleLoadingState, SampleLoadingState, sampleLoadEvents, SampleLoadedEvent, SampleLoadingStatus, loadBuiltInSamples, Dictionary, DictionaryArray, toNameMap, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegralOld, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb, OperatorWave, bundledSamplePacks } from "./SynthConfig";
 import { Preset, EditorConfig } from "../editor/EditorConfig";
 import { scaleElementsByFactor, inverseRealFourierTransform } from "./FFT";
 import { Deque } from "./Deque";
@@ -5992,115 +5992,122 @@ export class Song {
 
         if (parsedUrl != null) {
             // Store in the new format.
-            let urlWithNamedOptions = urlSliced;
-            const namedOptions: string[] = [];
-            if (customSampleRate !== 44100) namedOptions.push("s" + customSampleRate);
-            if (customRootKey !== 60) namedOptions.push("r" + customRootKey);
-            if (isCustomPercussive) namedOptions.push("p");
-            if (presetIsUsingAdvancedLoopControls) {
-                if (presetChipWaveLoopStart != null) namedOptions.push("a" + presetChipWaveLoopStart);
-                if (presetChipWaveLoopEnd != null) namedOptions.push("b" + presetChipWaveLoopEnd);
-                if (presetChipWaveStartOffset != null) namedOptions.push("c" + presetChipWaveStartOffset);
-                if (presetChipWaveLoopMode != null) namedOptions.push("d" + presetChipWaveLoopMode);
-                if (presetChipWavePlayBackwards) namedOptions.push("e");
-            }
-            if (namedOptions.length > 0) {
-                urlWithNamedOptions = "!" + namedOptions.join(",") + "!" + urlSliced;
-            }
-            customSampleUrls[customSampleUrlIndex] = urlWithNamedOptions;
+            if (!urlSliced.includes("sf2")) {
+                let urlWithNamedOptions = urlSliced;
+                const namedOptions: string[] = [];
+                if (customSampleRate !== 44100) namedOptions.push("s" + customSampleRate);
+                if (customRootKey !== 60) namedOptions.push("r" + customRootKey);
+                if (isCustomPercussive) namedOptions.push("p");
+                if (presetIsUsingAdvancedLoopControls) {
+                    if (presetChipWaveLoopStart != null) namedOptions.push("a" + presetChipWaveLoopStart);
+                    if (presetChipWaveLoopEnd != null) namedOptions.push("b" + presetChipWaveLoopEnd);
+                    if (presetChipWaveStartOffset != null) namedOptions.push("c" + presetChipWaveStartOffset);
+                    if (presetChipWaveLoopMode != null) namedOptions.push("d" + presetChipWaveLoopMode);
+                    if (presetChipWavePlayBackwards) namedOptions.push("e");
+                }
+                if (namedOptions.length > 0) {
+                    urlWithNamedOptions = "!" + namedOptions.join(",") + "!" + urlSliced;
+                }
+                customSampleUrls[customSampleUrlIndex] = urlWithNamedOptions;
 
-            // @TODO: Could also remove known extensions, but it
-            // would probably be much better to be able to specify
-            // a custom name.
-            // @TODO: If for whatever inexplicable reason someone
-            // uses an url like `https://example.com`, this will
-            // result in an empty name here.
-            let name: string;
-            if (OFFLINE) {
-                //@ts-ignore
-                name = decodeURIComponent(parsedUrl.replace(/^([^\/]*\/)+/, ""));
-            } else {
-                //@ts-ignore
-                name = decodeURIComponent(parsedUrl.pathname.replace(/^([^\/]*\/)+/, ""));
-            }
-            // @TODO: What to do about samples with the same name?
-            // The problem with using the url is that the name is
-            // user-facing and long names break assumptions of the
-            // UI.
-            const expression: number = 1.0;
-            Config.chipWaves[chipWaveIndex] = {
-                name: name,
-                expression: expression,
-                isCustomSampled: true,
-                isPercussion: isCustomPercussive,
-                rootKey: customRootKey,
-                sampleRate: customSampleRate,
-                samples: defaultIntegratedSamples,
-                index: chipWaveIndex,
-            };
-            Config.rawChipWaves[chipWaveIndex] = {
-                name: name,
-                expression: expression,
-                isCustomSampled: true,
-                isPercussion: isCustomPercussive,
-                rootKey: customRootKey,
-                sampleRate: customSampleRate,
-                samples: defaultSamples,
-                index: chipWaveIndex,
-            };
-            Config.rawRawChipWaves[chipWaveIndex] = {
-                name: name,
-                expression: expression,
-                isCustomSampled: true,
-                isPercussion: isCustomPercussive,
-                rootKey: customRootKey,
-                sampleRate: customSampleRate,
-                samples: defaultSamples,
-                index: chipWaveIndex,
-            };
-            const customSamplePresetSettings: Dictionary<any> = {
-                "type": "chip",
-                "eqFilter": [],
-                "effects": [],
-                "transition": "normal",
-                "fadeInSeconds": 0,
-                "fadeOutTicks": -3,
-                "chord": "harmony",
-                "wave": name,
-                "unison": "none",
-                "envelopes": [],
-            };
-            if (presetIsUsingAdvancedLoopControls) {
-                customSamplePresetSettings["isUsingAdvancedLoopControls"] = true;
-                customSamplePresetSettings["chipWaveLoopStart"] = presetChipWaveLoopStart != null ? presetChipWaveLoopStart : 0;
-                customSamplePresetSettings["chipWaveLoopEnd"] = presetChipWaveLoopEnd != null ? presetChipWaveLoopEnd : 2;
-                customSamplePresetSettings["chipWaveLoopMode"] = presetChipWaveLoopMode != null ? presetChipWaveLoopMode : 0;
-                customSamplePresetSettings["chipWavePlayBackwards"] = presetChipWavePlayBackwards;
-                customSamplePresetSettings["chipWaveStartOffset"] = presetChipWaveStartOffset != null ? presetChipWaveStartOffset : 0;
-            }
-            const customSamplePreset: Preset = {
-                index: 0, // This should be overwritten by toNameMap, in our caller.
-                name: name,
-                midiProgram: 80,
-                settings: customSamplePresetSettings,
-            };
-            customSamplePresets.push(customSamplePreset);
-            if (!Config.willReloadForCustomSamples) {
-                const rawLoopOptions: any = {
-                    "isUsingAdvancedLoopControls": presetIsUsingAdvancedLoopControls,
-                    "chipWaveLoopStart": presetChipWaveLoopStart,
-                    "chipWaveLoopEnd": presetChipWaveLoopEnd,
-                    "chipWaveLoopMode": presetChipWaveLoopMode,
-                    "chipWavePlayBackwards": presetChipWavePlayBackwards,
-                    "chipWaveStartOffset": presetChipWaveStartOffset,
+                // @TODO: Could also remove known extensions, but it
+                // would probably be much better to be able to specify
+                // a custom name.
+                // @TODO: If for whatever inexplicable reason someone
+                // uses an url like `https://example.com`, this will
+                // result in an empty name here.
+                let name: string;
+                if (OFFLINE) {
+                    //@ts-ignore
+                    name = decodeURIComponent(parsedUrl.replace(/^([^\/]*\/)+/, ""));
+                } else {
+                    //@ts-ignore
+                    name = decodeURIComponent(parsedUrl.pathname.replace(/^([^\/]*\/)+/, ""));
+                }
+                // @TODO: What to do about samples with the same name?
+                // The problem with using the url is that the name is
+                // user-facing and long names break assumptions of the
+                // UI.
+                const expression: number = 1.0;
+                Config.chipWaves[chipWaveIndex] = {
+                    name: name,
+                    expression: expression,
+                    isCustomSampled: true,
+                    isPercussion: isCustomPercussive,
+                    rootKey: customRootKey,
+                    sampleRate: customSampleRate,
+                    samples: defaultIntegratedSamples,
+                    index: chipWaveIndex,
                 };
-                startLoadingSample(urlSliced, chipWaveIndex, customSamplePresetSettings, rawLoopOptions, customSampleRate);
+                Config.rawChipWaves[chipWaveIndex] = {
+                    name: name,
+                    expression: expression,
+                    isCustomSampled: true,
+                    isPercussion: isCustomPercussive,
+                    rootKey: customRootKey,
+                    sampleRate: customSampleRate,
+                    samples: defaultSamples,
+                    index: chipWaveIndex,
+                };
+                Config.rawRawChipWaves[chipWaveIndex] = {
+                    name: name,
+                    expression: expression,
+                    isCustomSampled: true,
+                    isPercussion: isCustomPercussive,
+                    rootKey: customRootKey,
+                    sampleRate: customSampleRate,
+                    samples: defaultSamples,
+                    index: chipWaveIndex,
+                };
+                const customSamplePresetSettings: Dictionary<any> = {
+                    "type": "chip",
+                    "eqFilter": [],
+                    "effects": [],
+                    "transition": "normal",
+                    "fadeInSeconds": 0,
+                    "fadeOutTicks": -3,
+                    "chord": "harmony",
+                    "wave": name,
+                    "unison": "none",
+                    "envelopes": [],
+                };
+                if (presetIsUsingAdvancedLoopControls) {
+                    customSamplePresetSettings["isUsingAdvancedLoopControls"] = true;
+                    customSamplePresetSettings["chipWaveLoopStart"] = presetChipWaveLoopStart != null ? presetChipWaveLoopStart : 0;
+                    customSamplePresetSettings["chipWaveLoopEnd"] = presetChipWaveLoopEnd != null ? presetChipWaveLoopEnd : 2;
+                    customSamplePresetSettings["chipWaveLoopMode"] = presetChipWaveLoopMode != null ? presetChipWaveLoopMode : 0;
+                    customSamplePresetSettings["chipWavePlayBackwards"] = presetChipWavePlayBackwards;
+                    customSamplePresetSettings["chipWaveStartOffset"] = presetChipWaveStartOffset != null ? presetChipWaveStartOffset : 0;
+                }
+                const customSamplePreset: Preset = {
+                    index: 0, // This should be overwritten by toNameMap, in our caller.
+                    name: name,
+                    midiProgram: 80,
+                    settings: customSamplePresetSettings,
+                };
+                customSamplePresets.push(customSamplePreset);
+                if (!Config.willReloadForCustomSamples) {
+                    const rawLoopOptions: any = {
+                        "isUsingAdvancedLoopControls": presetIsUsingAdvancedLoopControls,
+                        "chipWaveLoopStart": presetChipWaveLoopStart,
+                        "chipWaveLoopEnd": presetChipWaveLoopEnd,
+                        "chipWaveLoopMode": presetChipWaveLoopMode,
+                        "chipWavePlayBackwards": presetChipWavePlayBackwards,
+                        "chipWaveStartOffset": presetChipWaveStartOffset,
+                    };
+                    startLoadingSample(urlSliced, chipWaveIndex, customSamplePresetSettings, rawLoopOptions, customSampleRate);
+                }
+                sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading;
+                sampleLoadingState.urlTable[chipWaveIndex] = urlSliced;
+                sampleLoadingState.totalSamples++;
+            } else {
+                Soundfont.soundfontURLS.push(url);
+                startLoadingSoundfont(urlSliced, chipWaveIndex);
+                sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading;
+                sampleLoadingState.urlTable[chipWaveIndex] = urlSliced;
+                sampleLoadingState.totalSamples++;
             }
-            sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading;
-            sampleLoadingState.urlTable[chipWaveIndex] = urlSliced;
-            sampleLoadingState.totalSamples++;
         }
-
         return true;
     }
 

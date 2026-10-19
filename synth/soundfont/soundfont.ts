@@ -193,10 +193,10 @@ export class Soundfont {
     public readonly sampleInfo: SampleInfo[];
 
     public static readonly soundfontURLS: Array<string> = [
-        "https://file.garden/ZxBw28OpLwxBlXVc/Bluegrass_Banjo.sf2",
-        "https://file.garden/ZxBw28OpLwxBlXVc/SRX_Acoustic_Bass.sf2",
-        "https://dl.dropboxusercontent.com/scl/fi/5dgonx0uhlasjwxlkgy00/CTinstruments.sf2?rlkey=4fhyvithjjxjyliy7lrilmrym&st=450mbyf8&dl=0",
-        "https://dl.dropboxusercontent.com/scl/fi/9cbprbhg6r64ltdt0cwwl/SC-55.sf2?rlkey=2wx9joy8eoqj1l8zamhld3n7a&st=yydmwjj2&dl=0",
+        //"https://file.garden/ZxBw28OpLwxBlXVc/Bluegrass_Banjo.sf2",
+        //"https://file.garden/ZxBw28OpLwxBlXVc/SRX_Acoustic_Bass.sf2",
+        //"https://dl.dropboxusercontent.com/scl/fi/5dgonx0uhlasjwxlkgy00/CTinstruments.sf2?rlkey=4fhyvithjjxjyliy7lrilmrym&st=450mbyf8&dl=0",
+        //"https://dl.dropboxusercontent.com/scl/fi/9cbprbhg6r64ltdt0cwwl/SC-55.sf2?rlkey=2wx9joy8eoqj1l8zamhld3n7a&st=yydmwjj2&dl=0",
     ];
 
     public static readonly loadedSoundfonts: Array<Soundfont> = [
@@ -218,13 +218,13 @@ export class Soundfont {
     //TODO: make the doc parameter not any, right now its a circular dependancy
     public static async loadSoundfont(url: string, sfIndex: number, doc: any): Promise<Soundfont> {
         return fetch(url).then((response) => {
-            console.log("Fetching "+url+"...");
+            //console.log("Fetching "+url+"...");
             if (!response.ok) {
                 return Promise.reject(new Error("Couldn't load sf2."));
             }
             return response.arrayBuffer();
         }).then((arrayBuffer) => {
-            console.log("Loading "+url+". Size of data: " + arrayBuffer.byteLength + " bytes.");
+            //console.log("Loading "+url+". Size of data: " + arrayBuffer.byteLength + " bytes.");
             let name: string = "";
             let presets: Preset[] = [];
             let buffer = new Uint8Array(arrayBuffer);
@@ -439,12 +439,12 @@ export class Soundfont {
                 const instrumentZones: InstrumentZone[] = [];
                 for (let i = bagRange[0] + global; i < bagRange[1]; i++) {
                     const zoneGens = this.getInstrumentBagGenerators(ibag, igen, i);
-                    console.log({
+                    /*console.log({
                         isGlobal: global,
                         zoneGens: zoneGens,
                         ibag: ibag,
                         igen: igen,
-                    });
+                    });*/
                     const mnPitch = this.getKeyRange(zoneGens)[0];
                     const mxPitch = this.getKeyRange(zoneGens)[1];
                     const sampleIndex = this.getGensOfType(zoneGens, GENERATORS.sampleID.op)[0];
@@ -502,7 +502,7 @@ export class Soundfont {
             //Construct soundfont from data
             const success = new Soundfont(name, presets, chipWaves, rawChipWaves, rawRawChipWaves, sampleInfo, url, true);
             this.loadedSoundfonts[sfIndex] = success;
-            console.log("Loading successful!: ", success);
+            //console.log("Loading successful!: ", success);
             
             // TODO: Make this a bit more specific
             doc.notifier.changed();

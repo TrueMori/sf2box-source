@@ -3,6 +3,7 @@ import { sampleLoadingState, SampleLoadingStatus, getSampleLoadingStatusName, Ch
 import { ColorConfig } from "./ColorConfig";
 import { EditorConfig } from "./EditorConfig";
 import { SongDocument } from "./SongDocument";
+import { Soundfont } from "../synth/soundfont/soundfont";
 
 const { div, h2, span, input, button } = HTML;
 
@@ -83,6 +84,34 @@ export class SampleLoadingStatusPrompt {
             const sampleName: string = chipWave.name;
             const url: string = sampleLoadingState.urlTable[chipWaveIndex];
             const loadingStatus: string = getSampleLoadingStatusName(sampleLoadingState.statusTable[chipWaveIndex]);
+            const urlDisplay: HTMLInputElement = input({ style: `margin-left: 0.5em; color: ${ColorConfig.primaryText}; background-color: ${ColorConfig.editorBackground}; width: 100%; border: 1px solid ${ColorConfig.uiWidgetBackground}; -webkit-user-select: none; -webkit-touch-callout: none; -moz-user-select: none; -ms-user-select: none; user-select: none;`, value: url, title: url, disabled: true });
+            const loadingStatusColor: string = loadingStatus === "loaded" ? ColorConfig.indicatorPrimary : ColorConfig.secondaryText;
+            const loadingStatusDisplay: HTMLSpanElement = span({ style: `margin-left: 0.5em; color: ${loadingStatusColor}` }, loadingStatus);
+            const chipWaveElement: HTMLDivElement = div({ style: `padding: 0.6em; margin: 0.4em; border: 1px solid ${ColorConfig.uiWidgetBackground}; border-radius: 4px;` },
+                div({
+                    class: "add-sample-prompt-sample-name",
+                    style: `margin-bottom: 0.5em; color: ${ColorConfig.secondaryText}; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;`,
+                    title: sampleName,
+                },
+                    sampleName
+                ),
+                div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: center; margin-bottom: 0.5em;" },
+                    div({ style: `text-align: right; color: ${ColorConfig.primaryText};` }, "URL"),
+                    urlDisplay
+                ),
+                div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: center; margin-bottom: 0.5em;" },
+                    div({ style: `text-align: right; color: ${ColorConfig.primaryText};` }, "Status"),
+                    loadingStatusDisplay
+                )
+            );
+            this._statusesContainer.appendChild(chipWaveElement);
+        }
+
+        for (let chipWaveIndex: number = 0; chipWaveIndex < Soundfont.loadedSoundfonts.length; chipWaveIndex++) {
+            const soundFont: Soundfont = Soundfont.loadedSoundfonts[chipWaveIndex];
+            const sampleName: string = soundFont.name;
+            const url: string = Soundfont.soundfontURLS[chipWaveIndex];
+            const loadingStatus: string = sampleName == "Loading..." ? "loading" : "loaded";
             const urlDisplay: HTMLInputElement = input({ style: `margin-left: 0.5em; color: ${ColorConfig.primaryText}; background-color: ${ColorConfig.editorBackground}; width: 100%; border: 1px solid ${ColorConfig.uiWidgetBackground}; -webkit-user-select: none; -webkit-touch-callout: none; -moz-user-select: none; -ms-user-select: none; user-select: none;`, value: url, title: url, disabled: true });
             const loadingStatusColor: string = loadingStatus === "loaded" ? ColorConfig.indicatorPrimary : ColorConfig.secondaryText;
             const loadingStatusDisplay: HTMLSpanElement = span({ style: `margin-left: 0.5em; color: ${loadingStatusColor}` }, loadingStatus);
