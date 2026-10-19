@@ -11848,21 +11848,23 @@ export class Synth {
         if (!currPresetGens) return;
         const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
         if (!currInstGens) return;
-        const sampleIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
+        const sIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
         const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
-        const currSample = sf.chipWaves[sampleIndex];
-        const sInfo = sf.sampleInfo[sampleIndex];
+        const currSample = sf.chipWaves[sIndex];
+        const sInfo = sf.sampleInfo[sIndex];
 
         if (!currSample)
             return;
 
-        const originalPitch = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.overridingRootKey.op)
+        let originalPitch = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.overridingRootKey.op)
             ?? sInfo.originalPitch;
         const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.coarseTune.op)
             ?? 0;
         const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.fineTune.op)
             ?? 0;
-        const rootFreq = Instrument.frequencyFromPitch(originalPitch + pitchCorrectionCourse + pitchCorrectionFine / 100 + sInfo.pCorrection / 100);
+        originalPitch = (originalPitch == 65535) ? 0 : originalPitch;
+        const rootFreq = Instrument.frequencyFromPitch(originalPitch + pitchCorrectionCourse + pitchCorrectionFine / 100.0 + sInfo.pCorrection / 100.0);
+        console.log(originalPitch, pitchCorrectionCourse, pitchCorrectionFine, sInfo.pCorrection);
         const waveLength = currSample.length;
         const loopStart = sInfo.loopStart;
         const loopEnd = sInfo.loopEnd;
@@ -11899,6 +11901,7 @@ export class Synth {
 
         const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
         const stopIndex: number = bufferIndex + roundedSamplesPerTick;
+
         for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
             let inputSample: number = 0;
 

@@ -25,70 +25,67 @@ enum GeneratorCombination {
     exclusiveClass,
     index,
     reserved,
+    link,
+    override,
+}
+
+enum ParseType {
+    Uint16,
+    Int16,
+    Range,
 }
 
 export const GENERATORS: Dictionary<GeneratorDef> = {
-    startAddrsOffset:           { op: 0,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    endAddrsOffset:             { op: 1,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    startloopAddrsOffset:       { op: 2,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    endloopAddrsOffset:         { op: 3,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    startAddrsCoarseOffset:     { op: 4,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    modLfoToPitch:              { op: 5,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    vibLfoToPitch:              { op: 6,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    modEnvToPitch:              { op: 7,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    initialFilterFc:            { op: 8,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 13500 },
-    initialFilterQ:             { op: 9,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    modLfoToFilterFc:           { op: 10, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    modEnvToFilterFc:           { op: 11, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    endAddrsCoarseOffset:       { op: 12, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    modLfoToVolume:             { op: 13, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    unused1:                    { op: 14, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    chorusEffectsSend:          { op: 15, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    reverbEffectsSend:          { op: 16, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    pan:                        { op: 17, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    unused2:                    { op: 18, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    unused3:                    { op: 19, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    unused4:                    { op: 20, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    delayModLFO:                { op: 21, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    freqModLFO:                 { op: 22, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    delayVibLFO:                { op: 23, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    freqVibLFO:                 { op: 24, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    delayModEnv:                { op: 25, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    attackModEnv:               { op: 26, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    holdModEnv:                 { op: 27, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    decayModEnv:                { op: 28, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    sustainModEnv:              { op: 29, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    releaseModEnv:              { op: 30, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    keynumToModEnvHold:         { op: 31, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    keynumToModEnvDecay:        { op: 32, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    delayVolEnv:                { op: 33, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    attackVolEnv:               { op: 34, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    holdVolEnv:                 { op: 35, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    decayVolEnv:                { op: 36, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    sustainVolEnv:              { op: 37, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    releaseVolEnv:              { op: 38, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: -12000 },
-    keynumToVolEnvHold:         { op: 39, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    keynumToVolEnvDecay:        { op: 40, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    instrument:                 { op: 41, presetAllowed: true,  instrumentAllowed: false, type: GeneratorCombination.index,            defaultValue: null },
-    unused5:                    { op: 42, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    keyRange:                   { op: 43, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,            defaultValue: 32512 },
-    velRange:                   { op: 44, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,            defaultValue: 32512 },
-    startloopAddrsCoarseOffset: { op: 45, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    keynum:                     { op: 46, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.substitution,     defaultValue: -1 },
-    velocity:                   { op: 47, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.substitution,     defaultValue: -1 },
-    initialAttenuation:         { op: 48, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    unused6:                    { op: 49, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    endloopAddrsCoarseOffset:   { op: 50, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0 },
-    coarseTune:                 { op: 51, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    fineTune:                   { op: 52, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 0 },
-    sampleID:                   { op: 53, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.index,            defaultValue: null },
-    sampleModes:                { op: 54, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleMode,        defaultValue: 0 },
-    unused7:                    { op: 55, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    scaleTuning:                { op: 56, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,        defaultValue: 100 },
-    exclusiveClass:             { op: 57, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.exclusiveClass,    defaultValue: 0 },
-    overridingRootKey:          { op: 58, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleRootKey,     defaultValue: null },
-    unused8:                    { op: 59, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
-    endOper:                    { op: 60, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.reserved,          defaultValue: 0 },
+    startAddrsOffset:           { op: 0,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    endAddrsOffset:             { op: 1,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    startloopAddrsOffset:       { op: 2,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    endloopAddrsOffset:         { op: 3,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    startAddrsCoarseOffset:     { op: 4,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    modLfoToPitch:              { op: 5,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    vibLfoToPitch:              { op: 6,  presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    modEnvToPitch:              { op: 7,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    initialFilterFc:            { op: 8,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 13500, parseType:ParseType.Int16 },
+    initialFilterQ:             { op: 9,  presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    endAddrsCoarseOffset:       { op: 12, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    modLfoToVolume:             { op: 13, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    chorusEffectsSend:          { op: 15, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    reverbEffectsSend:          { op: 16, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    pan:                        { op: 17, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    delayModLFO:                { op: 21, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    freqModLFO:                 { op: 22, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    delayVibLFO:                { op: 23, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    freqVibLFO:                 { op: 24, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    delayModEnv:                { op: 25, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    attackModEnv:               { op: 26, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    holdModEnv:                 { op: 27, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    decayModEnv:                { op: 28, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    sustainModEnv:              { op: 29, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Uint16 },
+    releaseModEnv:              { op: 30, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    keynumToModEnvHold:         { op: 31, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    keynumToModEnvDecay:        { op: 32, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    delayVolEnv:                { op: 33, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    attackVolEnv:               { op: 34, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    holdVolEnv:                 { op: 35, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    decayVolEnv:                { op: 36, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    sustainVolEnv:              { op: 37, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    releaseVolEnv:              { op: 38, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: -12000, parseType:ParseType.Int16 },
+    keynumToVolEnvHold:         { op: 39, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    keynumToVolEnvDecay:        { op: 40, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    instrument:                 { op: 41, presetAllowed: true,  instrumentAllowed: false, type: GeneratorCombination.link,            defaultValue: null,  parseType:ParseType.Uint16 },
+    keyRange:                   { op: 43, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,           defaultValue: 32512, parseType:ParseType.Range },
+    velRange:                   { op: 44, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.range,           defaultValue: 32512, parseType:ParseType.Range },
+    startloopAddrsCoarseOffset: { op: 45, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    keynum:                     { op: 46, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: -1,    parseType:ParseType.Int16 },
+    velocity:                   { op: 47, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: -1,    parseType:ParseType.Int16 },
+    initialAttenuation:         { op: 48, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    endloopAddrsCoarseOffset:   { op: 50, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.sampleOffset,    defaultValue: 0,     parseType:ParseType.Uint16 },
+    coarseTune:                 { op: 51, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    fineTune:                   { op: 52, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.additive,       defaultValue: 0,     parseType:ParseType.Int16 },
+    sampleID:                   { op: 53, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.link,            defaultValue: null,  parseType:ParseType.Uint16 },
+    sampleModes:                { op: 54, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: 0,     parseType:ParseType.Uint16 },
+    scaleTuning:                { op: 56, presetAllowed: true,  instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: 100,   parseType:ParseType.Int16 },
+    exclusiveClass:             { op: 57, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: 0,     parseType:ParseType.Uint16 },
+    overridingRootKey:          { op: 58, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,        defaultValue: null,  parseType:ParseType.Uint16 },
 } as const;
 
 interface GeneratorDef {
@@ -97,6 +94,7 @@ interface GeneratorDef {
     instrumentAllowed: boolean,
     type: GeneratorCombination,
     defaultValue: number,
+    parseType:ParseType,
 }
 
 interface Instrument {
@@ -293,10 +291,17 @@ export class Soundfont {
                         currRecord = 0;
                         while (currRecord < recordCount) {
                             const recLocation = (currRecord * 4) + postByte;
+                            const op = view.getUint16(recLocation, true)
+                            let amt: number;
+                            if (this.getDefFromGenerator({op: op, amt: 0}).parseType == ParseType.Int16) {
+                                amt = view.getInt16(recLocation + 2, true);
+                            } else {
+                                amt = view.getUint16(recLocation + 2, true);
+                            }
                             pgen.push({
-                                op: view.getUint16(recLocation, true),
-                                amt: view.getUint16(recLocation + 2, true),
-                            })
+                                op: op,
+                                amt: amt,
+                            });
                             currRecord++;
                         }
                         currByte += 8 + size + (size % 2);
@@ -307,9 +312,16 @@ export class Soundfont {
                         currRecord = 0;
                         while (currRecord < recordCount) {
                             const recLocation = (currRecord * 4) + postByte;
+                            const op = view.getUint16(recLocation, true)
+                            let amt: number;
+                            if (this.getDefFromGenerator({op: op, amt: 0}).parseType == ParseType.Int16) {
+                                amt = view.getInt16(recLocation + 2, true);
+                            } else {
+                                amt = view.getUint16(recLocation + 2, true);
+                            }
                             igen.push({
-                                op: view.getUint16(recLocation, true),
-                                amt: view.getUint16(recLocation + 2, true),
+                                op: op,
+                                amt: amt,
                             });
                             currRecord++;
                         }
