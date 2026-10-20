@@ -424,6 +424,7 @@ export function makeNotePin(interval: number, time: number, size: number): NoteP
 
 export class Note {
     public pitches: number[];
+    public originalPitch: number;
     public pins: NotePin[];
     public start: number;
     public end: number;
@@ -7341,6 +7342,7 @@ class EnvelopeComputer {
 class Tone {
     public instrumentIndex: number;
     public readonly pitches: number[] = Array(Config.maxChordSize+2).fill(0);
+    public originalPitch: number;
     public pitchCount: number = 0;
     public chordSize: number = 0;
     public drumsetPitch: number | null = null;
@@ -10232,6 +10234,12 @@ export class Synth {
                         tone.passedEndOfNote = false;
                         tone.forceContinueAtStart = forceContinueAtStart;
                         tone.forceContinueAtEnd = forceContinueAtEnd;
+                        if (!tone.prevNote.originalPitch) {
+                            tone.note.originalPitch = note.pitches[0];
+                        } else if (tone.prevNote.originalPitch && forceContinueAtStart) {
+                            tone.note.originalPitch = tone.prevNote.originalPitch;
+                        }
+                        console.log(tone.note.originalPitch);
                         this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
                     } else {
                         const transition: Transition = instrument.getTransition();
@@ -10313,6 +10321,11 @@ export class Synth {
                             tone.passedEndOfNote = passedEndOfNote;
                             tone.forceContinueAtStart = forceContinueAtStart && prevNoteForThisTone != null;
                             tone.forceContinueAtEnd = forceContinueAtEnd && nextNoteForThisTone != null;
+                            if (!tone.prevNote?.originalPitch) {
+                                tone.note.originalPitch = note.pitches[0];
+                            } else if (tone.prevNote.originalPitch && forceContinueAtStart) {
+                                tone.note.originalPitch = tone.prevNote.originalPitch;
+                            }
                             this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
                         }
                     }
@@ -10495,9 +10508,17 @@ export class Synth {
             //let currSample = Soundfont.getSamplesFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0])[0];
             baseExpression = Config.soundfontBaseExpression;
 
-            const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
+            if (tone.note && tone.note.originalPitch) {
+                const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.note.originalPitch);
+                console.log(tone.note.originalPitch);
+                instrumentState.soundfontGens.set(tone.note.originalPitch, gens);
+            } else {
+                const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
+                console.log(tone.pitches[0]);
+                instrumentState.soundfontGens.set(tone.pitches[0], gens);
+            }
 
-            instrumentState.soundfontGens.set(tone.pitches[0], gens);
+
         } else {
             throw new Error("Unknown instrument type in computeTone.");
         }
@@ -11851,12 +11872,19 @@ export class Synth {
         }
     private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
         const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
-        const gens: PresetGenerators[] = instrumentState.soundfontGens.get(tone.pitches[0]);
+        let gens: PresetGenerators[];
+        if (tone.note && tone.note.originalPitch) {
+            gens = instrumentState.soundfontGens.get(tone.note.originalPitch);
+        } else {
+            gens = instrumentState.soundfontGens.get(tone.pitches[0]); 
+        }
+        if (!gens) return;
 
         const currPresetGens = (gens.length > 0) ? gens[0] : null; // TODO: allow for multiple instZones and presetZones to play at once
         if (!currPresetGens) return;
         const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
         if (!currInstGens) return;
+        
         const sIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
         const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
         const currSample = sf.chipWaves[sIndex];
