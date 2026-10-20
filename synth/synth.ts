@@ -11881,23 +11881,19 @@ export class Synth {
         const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
         if (!currInstGens) return;
         
-        const sIndex = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleID.op);
-        const loopMode = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.sampleModes.op);
+        const sIndex = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.sampleID.op);
+        const loopMode = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.sampleModes.op);
         const currSample = sf.chipWaves[sIndex];
         const sInfo = sf.sampleInfo[sIndex];
 
         if (!currSample)
             return;
 
-        let originalPitch = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.overridingRootKey.op)
+        let originalPitch = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.overridingRootKey.op)
             ?? sInfo.originalPitch;
-        const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.coarseTune.op)
-            ?? 0;
-        const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.fineTune.op)
-            ?? 0;
-        const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, GENERATORS.scaleTuning.op)
-            ?? Soundfont.getGenAmtFromOp(currPresetGens, GENERATORS.scaleTuning.op)
-            ?? 100;
+        const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.coarseTune.op);
+        const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.fineTune.op);
+        const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.scaleTuning.op);
         originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
         //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
         //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
