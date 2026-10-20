@@ -7342,7 +7342,6 @@ class EnvelopeComputer {
 class Tone {
     public instrumentIndex: number;
     public readonly pitches: number[] = Array(Config.maxChordSize+2).fill(0);
-    public originalPitch: number;
     public pitchCount: number = 0;
     public chordSize: number = 0;
     public drumsetPitch: number | null = null;
@@ -10234,12 +10233,11 @@ export class Synth {
                         tone.passedEndOfNote = false;
                         tone.forceContinueAtStart = forceContinueAtStart;
                         tone.forceContinueAtEnd = forceContinueAtEnd;
-                        if (!tone.prevNote.originalPitch) {
+                        if (!tone.prevNote?.originalPitch) {
                             tone.note.originalPitch = note.pitches[0];
                         } else if (tone.prevNote.originalPitch && forceContinueAtStart) {
                             tone.note.originalPitch = tone.prevNote.originalPitch;
                         }
-                        console.log(tone.note.originalPitch);
                         this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
                     } else {
                         const transition: Transition = instrument.getTransition();
@@ -10510,11 +10508,9 @@ export class Synth {
 
             if (tone.note && tone.note.originalPitch) {
                 const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.note.originalPitch);
-                console.log(tone.note.originalPitch);
                 instrumentState.soundfontGens.set(tone.note.originalPitch, gens);
             } else {
                 const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
-                console.log(tone.pitches[0]);
                 instrumentState.soundfontGens.set(tone.pitches[0], gens);
             }
 

@@ -502,7 +502,7 @@ export class Soundfont {
             //Construct soundfont from data
             const success = new Soundfont(name, presets, chipWaves, rawChipWaves, rawRawChipWaves, sampleInfo, url, true);
             this.loadedSoundfonts[sfIndex] = success;
-            console.log("Loading successful!: ", success);
+            //console.log("Loading successful!: ", success);
             
             // TODO: Make this a bit more specific
             doc.notifier.changed();
