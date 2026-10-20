@@ -44,7 +44,7 @@ npm install @types/jquery
 
 The code is divided into several folders. This architecture is identical to BeepBox's.
 
-The [synth/](synth) folder has just the code you need to be able to play UltraBox
+The [synth/](synth) folder has just the code you need to be able to play sf2box\
 songs out loud, and you could use this code in your own projects, like a web
 game. After compiling the synth code, open website/synth_example.html to see a
 demo using it. To rebuild just the synth code, run:
@@ -74,10 +74,10 @@ The build process outputs JavaScript files into this folder.
 ## Dependencies
 
 Most of the dependencies are listed in [package.json](package.json), although
-I'd like to note that UltraBox also has an indirect, optional dependency on
+I'd like to note that sf2box also has an indirect, optional dependency on
 [lamejs](https://www.npmjs.com/package/lamejs) via
 [jsdelivr](https://www.jsdelivr.com/) for exporting .mp3 files. If the user
-attempts to export an .mp3 file, UltraBox will direct the browser to download
+attempts to export an .mp3 file, sf2box will direct the browser to download
 that dependency on demand.
 
 

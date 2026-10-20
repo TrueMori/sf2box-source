@@ -58,10 +58,12 @@ export class AddSamplesPrompt {
             " and ",
             code(bundledSamplePacks.mariopaintbox),
             " for more built-in sample packs.",
-            "In sf2box, you can now also add custom soundfonts in the same way."
         ),
         div({ style: "margin-bottom: 0.5em;" },
             "The order of these samples is important - if you change their order or remove them you'll break your song!"
+        ),
+        div({ style: "margin-bottom: 0.5em;" },
+            "In sf2box, you can also import soundfonts using the same method as custom chip samples."
         ),
         div({ style: "margin-bottom: 0.5em; font-size: 17px;" },
             this._instructionsLink,
