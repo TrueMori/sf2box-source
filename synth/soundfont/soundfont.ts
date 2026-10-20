@@ -95,7 +95,7 @@ export const GENERATORS: Dictionary<GeneratorDef> = {
     reserved3:                  { op: 55, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.none,         defaultValue: 0,     parseType: ParseType.Uint16 },
     scaleTuning:                { op: 56, presetAllowed: true,  instrumentAllowed: false, type: GeneratorCombination.override,    defaultValue: 100,   parseType: ParseType.Int16 },
     exclusiveClass:             { op: 57, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,    defaultValue: 0,     parseType: ParseType.Uint16 },
-    overridingRootKey:          { op: 58, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,    defaultValue: 65535, parseType: ParseType.Uint16 },
+    overridingRootKey:          { op: 58, presetAllowed: false, instrumentAllowed: true,  type: GeneratorCombination.override,    defaultValue: null, parseType: ParseType.Uint16 },
     unused5:                    { op: 59, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.none,         defaultValue: 0,     parseType: ParseType.Uint16 },
     endOper:                    { op: 60, presetAllowed: false, instrumentAllowed: false, type: GeneratorCombination.none,         defaultValue: 0,     parseType: ParseType.Uint16 },
 } as const;
@@ -502,7 +502,7 @@ export class Soundfont {
             //Construct soundfont from data
             const success = new Soundfont(name, presets, chipWaves, rawChipWaves, rawRawChipWaves, sampleInfo, url, true);
             this.loadedSoundfonts[sfIndex] = success;
-            console.log("Loading successful!: ", success);
+            //console.log("Loading successful!: ", success);
             
             // TODO: Make this a bit more specific
             doc.notifier.changed();
@@ -595,9 +595,9 @@ export class Soundfont {
         return result;
     }
 
-    private static getGenDef(gen: Generator): GeneratorDef {
+    private static getGenDef(op: number): GeneratorDef {
         for (const presetGen in GENERATORS) {
-            if (GENERATORS[presetGen].op == gen.op) {
+            if (GENERATORS[presetGen].op == op) {
                 return GENERATORS[presetGen];
             }
         }
@@ -627,7 +627,7 @@ export class Soundfont {
     }
 
     private static resolveGlobalAndZoneGen(globalGen: Generator | null, zoneGen: Generator): Generator {
-        const genDef = this.getGenDef(zoneGen); //assuming theyre the same op
+        const genDef = this.getGenDef(zoneGen.op); //assuming theyre the same op
         if (genDef.type == GeneratorCombination.range && globalGen) {
             const globalRange = this.getRangeTypeValues(globalGen.amt);
             const zoneRange = this.getRangeTypeValues(zoneGen.amt);
@@ -641,7 +641,7 @@ export class Soundfont {
     }
 
     private static resolvePresetAndInstGen(presetGen: Generator, instGen: Generator): Generator {
-        const genDef = this.getGenDef(presetGen); //assuming theyre the same op
+        const genDef = this.getGenDef(presetGen.op); //assuming theyre the same op
         if (genDef.type == GeneratorCombination.range) {
             const presetRange = this.getRangeTypeValues(presetGen.amt);
             const instRange = this.getRangeTypeValues(instGen.amt);
@@ -733,11 +733,17 @@ export class Soundfont {
         return null;
     }
 
-    public static getGenAmtFromOp(genList: InstGenerators | PresetGenerators, op: number): number | null {
-        const gens = genList.gens;
-        const foundGen = gens.find(gen => gen.op === op);
-        const genDef = Object.values(GENERATORS).find(def => def.op === op);
-        return foundGen?.amt ?? genDef?.defaultValue ?? null;
+    public static getGenAmtFromOp(instGens: InstGenerators, presetGens: PresetGenerators, op: number): number | null {
+        const genDef = this.getGenDef(op);
+        if (genDef.instrumentAllowed && genDef.presetAllowed) {
+            return instGens.gens.find((gen) => gen.op == op)?.amt ?? presetGens.gens.find((gen) => gen.op == op)?.amt ?? genDef.defaultValue;
+        } else if (genDef.instrumentAllowed) {
+            return instGens.gens.find((gen) => gen.op == op)?.amt ?? genDef.defaultValue;
+        } else if (genDef.presetAllowed) {
+            return presetGens.gens.find((gen) => gen.op == op)?.amt ?? genDef.defaultValue;
+        } else {
+            return null;
+        }
     }
 
     constructor(name: string, presets: Preset[], chipWaves: Float32Array[], rawChipWaves: Float32Array[], rawRawChipWaves: Float32Array[], sampleInfo: SampleInfo[], url: string, success: boolean) {
