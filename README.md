@@ -1,18 +1,15 @@
-# UltraBox
+# sf2box
 
-UltraBox is an online tool for sketching and sharing instrumental music.
-You can find it [here](https://ultraabox.github.io).
-It is a modification of [JummBox](https://github.com/jummbus/jummbox), which inturn is a modification of the [original BeepBox](https://beepbox.co).
-
-The goal of UltraBox is to combine every single beepbox mod into one. Feel free to contribute!
-
+sf2box is a beepmod that adds soundfont support to Ultrabox.
+You can find it [here](https://github.com/TrueMori/sf2box-source).
+It is a modification of [UltraBox](https://ultraabox.github.io), which is a modificcation of [JummBox](https://github.com/jummbus/jummbox), which inturn is a modification of the [original BeepBox](https://beepbox.co).
 
 All song data is packaged into the URL at the top of your browser. When you make
 changes to the song, the URL is updated to reflect your changes. When you are
 satisfied with your song, just copy and paste the URL to save and share your
 song!
 
-UltraBox, as well as the beepmods which it's based on, are free projects. If you ever feel so inclined, please support the original creator, [John Nesky](http://www.johnnesky.com/), via
+sf2box, as well as the beepmods which it's based on, are free projects. If you ever feel so inclined, please support the original creator, [John Nesky](http://www.johnnesky.com/), via
 [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QZJTX9GRYEV9N&currency_code=USD)!
 
 ## Compiling
@@ -25,13 +22,13 @@ The source code is available under the MIT license. The code is written in
 build this project, open a command line ([Git Bash](https://gitforwindows.org/)) and run:
 
 ```
-git clone https://github.com/ultraabox/ultrabox_typescript
-cd ultrabox_typescript
+git clone https://github.com/TrueMori/sf2box-source
+cd sf2box-source
 npm install
 npm run build
 ```
 
-JummBox (and by extension, Ultrabox) makes a divergence from BeepBox that necessitates an additional dependency:
+JummBox (and by extension, sf2box) makes a divergence from BeepBox that necessitates an additional dependency:
 rather than using the (rather poor) default HTML select implementation, the custom
 library [select2](https://select2.org) is employed. select2 has an explicit dependency
 on [jQuery](https://jquery.com) as well, so you may need to install the following

@@ -57,7 +57,8 @@ export class AddSamplesPrompt {
             code(bundledSamplePacks.nintaribox),
             " and ",
             code(bundledSamplePacks.mariopaintbox),
-            " for more built-in sample packs."
+            " for more built-in sample packs.",
+            "In sf2box, you can now also add custom soundfonts in the same way."
         ),
         div({ style: "margin-bottom: 0.5em;" },
             "The order of these samples is important - if you change their order or remove them you'll break your song!"
@@ -71,7 +72,7 @@ export class AddSamplesPrompt {
         { style: "display: none; margin-top: 0; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; cursor: text; overflow-y: auto;" },
         h2("Add Samples"),
         div({ style: "margin-top: 0.5em; margin-bottom: 0.5em;" },
-            "In UltraBox, custom samples are loaded from arbitrary URLs.",
+            "In UltraBox and sf2box, custom samples are loaded from arbitrary URLs.",
         ),
         div({ style: `margin-top: 0.5em; margin-bottom: 0.5em; color: ${ColorConfig.secondaryText};` },
             "(Technically, the web server behind the URL needs to support ",

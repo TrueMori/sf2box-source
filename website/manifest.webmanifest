@@ -1,7 +1,7 @@
 {
-	"name": "UltraBox",
-	"short_name": "UltraBox",
-	"description": "UltraBox is a mod of BeepBox that aims to combine every other beepmod into one.",
+	"name": "sf2box",
+	"short_name": "sf2box",
+	"description": "sf2box is a mod of UltraBox that adds soundfont support.",
 	"scope": "/",
 	"start_url": ".",
 	"display": "browser",
