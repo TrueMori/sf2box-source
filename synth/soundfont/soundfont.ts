@@ -169,11 +169,13 @@ interface TypeInfo {
 
 export interface InstGenerators {
     gens: Generator[],
+    index: number,
 }
 
 export interface PresetGenerators {
     gens: Generator[],
     instGenerators: InstGenerators[],
+    index: number,
 }
 
 interface PHDR extends TypeInfo { //these are just for organization
@@ -670,6 +672,7 @@ export class Soundfont {
         //Get generators of each type
         const globalPresetGens = new Map<number, number>(); //global preset gens
         preset.globalGens.forEach((gen) => globalPresetGens.set(gen.op, gen.amt));
+        let pZoneIndex = 0;
         for (const pZone of preset.presetZones) {
             if (pitch < Math.max(pZone.minPitch, preset.minPitch) || pitch > Math.min(pZone.maxPitch, preset.maxPitch))
                 continue;
@@ -688,6 +691,7 @@ export class Soundfont {
             const instGens: InstGenerators[] = [];
             const instrument = pZone.instrument;
             instrument.globalGens.forEach((gen) => globalInstGens.set(gen.op, gen.amt));
+            let iZoneIndex = 0;
             for (const iZone of pZone.instrument.instrumentZones) {
                 if (pitch < Math.max(iZone.minPitch, instrument.minPitch) || pitch > Math.min(iZone.maxPitch, instrument.maxPitch))
                     continue;
@@ -716,10 +720,13 @@ export class Soundfont {
                     }
                 });
 
-                instGens.push({gens: iGens});
+                instGens.push({gens: iGens, index: iZoneIndex});
+                iZoneIndex++;
             }
             if (instGens.length > 0)
-                generators.push({gens: presetGens, instGenerators: instGens});
+                generators.push({gens: presetGens, instGenerators: instGens, index: pZoneIndex});
+            
+            pZoneIndex++;
         }
 
         return generators;

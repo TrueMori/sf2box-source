@@ -7418,6 +7418,10 @@ class Tone {
     public filterResonanceDelta: number = 0.0;
     public isFirstOrder: boolean = false;
 
+    public sfPhases = new Map<string, number>();
+    public sfInitialNoteFilterInput1 = new Map<string, number>();
+    public sfInitialNoteFilterInput2 = new Map<string, number>();
+
     public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(/*true*/);
 
     constructor() {
@@ -7438,6 +7442,9 @@ class Tone {
             this.feedbackOutputs[i] = 0.0;
             this.prevPitchExpressions[i] = null;
         }
+        this.sfPhases.clear();
+        this.sfInitialNoteFilterInput1.clear();
+        this.sfInitialNoteFilterInput2.clear();
         for (let i: number = 0; i < this.noteFilterCount; i++) {
             this.noteFilters[i].resetOutput();
         }
@@ -8627,6 +8634,8 @@ export class Synth {
     private limit: number = 0.0;
 
     private tempMonoInstrumentSampleBuffer: Float32Array | null = null;
+    private tempInstrumentSampleBufferR: Float32Array | null = null;
+    private tempInstrumentSampleBufferL: Float32Array | null = null;
 
     private audioCtx: any | null = null;
     private scriptNode: any | null = null;
@@ -9299,6 +9308,12 @@ export class Synth {
 
         if (this.tempMonoInstrumentSampleBuffer == null || this.tempMonoInstrumentSampleBuffer.length < outputBufferLength) {
             this.tempMonoInstrumentSampleBuffer = new Float32Array(outputBufferLength);
+        }
+        if (this.tempInstrumentSampleBufferL == null || this.tempInstrumentSampleBufferL.length < outputBufferLength) {
+            this.tempInstrumentSampleBufferL = new Float32Array(outputBufferLength);
+        }
+        if (this.tempInstrumentSampleBufferR == null || this.tempInstrumentSampleBufferR.length < outputBufferLength) {
+            this.tempInstrumentSampleBufferR = new Float32Array(outputBufferLength);
         }
 
         // Post processing parameters:
@@ -10233,10 +10248,10 @@ export class Synth {
                         tone.passedEndOfNote = false;
                         tone.forceContinueAtStart = forceContinueAtStart;
                         tone.forceContinueAtEnd = forceContinueAtEnd;
-                        if (!tone.prevNote?.originalPitch) {
-                            tone.note.originalPitch = note.pitches[0];
-                        } else if (tone.prevNote.originalPitch && forceContinueAtStart) {
+                        if (tone.prevNote && ((tone.prevNote.originalPitch && forceContinueAtStart) || (transition.continues || transition.slides))) {
                             tone.note.originalPitch = tone.prevNote.originalPitch;
+                        } else {
+                            tone.note.originalPitch = note.pitches[0];
                         }
                         this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
                     } else {
@@ -10319,10 +10334,10 @@ export class Synth {
                             tone.passedEndOfNote = passedEndOfNote;
                             tone.forceContinueAtStart = forceContinueAtStart && prevNoteForThisTone != null;
                             tone.forceContinueAtEnd = forceContinueAtEnd && nextNoteForThisTone != null;
-                            if (!tone.prevNote?.originalPitch) {
-                                tone.note.originalPitch = note.pitches[0];
-                            } else if (tone.prevNote.originalPitch && forceContinueAtStart) {
+                            if (tone.prevNote && ((tone.prevNote.originalPitch && forceContinueAtStart) || (transition.continues || transition.slides))) {
                                 tone.note.originalPitch = tone.prevNote.originalPitch;
+                            } else {
+                                tone.note.originalPitch = note.pitches[i];
                             }
                             this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
                         }
@@ -10513,8 +10528,6 @@ export class Synth {
                 const gens = Soundfont.getGeneratorsOfLevelsFromMidiPitch(instrument.soundfont, instrument.soundfontPreset, tone.pitches[0]);
                 instrumentState.soundfontGens.set(tone.pitches[0], gens);
             }
-
-
         } else {
             throw new Error("Unknown instrument type in computeTone.");
         }
@@ -11868,53 +11881,24 @@ export class Synth {
         }
     private static soundfontSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
         const sf: Soundfont = Soundfont.loadedSoundfonts[instrumentState.soundfontIndex];
+        let pitch: number = 0;
         let gens: PresetGenerators[];
         if (tone.note && tone.note.originalPitch) {
             gens = instrumentState.soundfontGens.get(tone.note.originalPitch);
+            pitch = tone.note.originalPitch;
         } else {
             gens = instrumentState.soundfontGens.get(tone.pitches[0]); 
+            pitch = tone.pitches[0]
         }
-        if (!gens) return;
+        if (!gens || gens.length == 0) return;
 
-        const currPresetGens = (gens.length > 0) ? gens[0] : null; // TODO: allow for multiple instZones and presetZones to play at once
-        if (!currPresetGens) return;
-        const currInstGens = (currPresetGens.instGenerators.length > 0) ? gens[0].instGenerators[0] : null;
-        if (!currInstGens) return;
-        
-        const sIndex = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.sampleID.op);
-        const loopMode = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.sampleModes.op);
-        const currSample = sf.chipWaves[sIndex];
-        const sInfo = sf.sampleInfo[sIndex];
-
-        if (!currSample)
-            return;
-
-        let originalPitch = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.overridingRootKey.op)
-            ?? sInfo.originalPitch;
-        const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.coarseTune.op);
-        const pitchCorrectionFine = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.fineTune.op);
-        const scaleTuning = Soundfont.getGenAmtFromOp(currInstGens, currPresetGens, GENERATORS.scaleTuning.op);
-        originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
-        //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
-        //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
-        const rootFreq = Instrument.frequencyFromPitch(originalPitch - pitchCorrectionCourse - pitchCorrectionFine / 100.0 - sInfo.pCorrection / 100.0);
-        const waveLength = currSample.length;
-        const loopStart = sInfo.loopStart;
-        const loopEnd = sInfo.loopEnd;
-        const loopRange = loopEnd - loopStart;
-        const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;
-        const applyFilters: Function = Synth.applyFilters;
         let expression: number = +tone.expression;
         const expressionDelta: number = +tone.expressionDelta;
-        let initialFilterInput1: number = +tone.initialNoteFilterInput1;
-        let initialFilterInput2: number = +tone.initialNoteFilterInput2;
-        const filters: DynamicBiquadFilter[] = tone.noteFilters;
-        const filterCount: number = tone.noteFilterCount | 0;
-        const volumeScale = instrumentState.volumeScale;
+        const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 
         //originally here because i attepted crossfading, but... nice to have, i guess!
         //it's linear interpolation, to make it smooth across different speeds.
-        const readSample = (position: number): number => { 
+        const readSample = (position: number, currSample: Float32Array, canLoop: boolean, loopEnd: number, loopStart: number): number => {
             const index = Math.floor(position);
             const fraction = position - index;
             const a = currSample[index] ?? 0;
@@ -11928,42 +11912,84 @@ export class Synth {
             return a + (b - a) * fraction;
         };
 
-        let phase: number = tone.phases[0] * waveLength;
-        let phaseDelta: number = tone.phaseDeltas[0] * sInfo.sampleRate / rootFreq * Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);
-        const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
+        for (const presetGens of gens) { //one sample can have multiple presetZones and instrumentZones, so we gotta do this
+            const currInstGens = (presetGens.instGenerators.length > 0) ? presetGens.instGenerators : null;
+            if (!currInstGens) continue;
 
-        const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-        const stopIndex: number = bufferIndex + roundedSamplesPerTick;
+            for (const instGens of presetGens.instGenerators) {
+                let layerExpression = expression;
+                
+                const sIndex = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.sampleID.op);
+                const loopMode = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.sampleModes.op);
+                const currSample = sf.chipWaves[sIndex];
+                const sInfo = sf.sampleInfo[sIndex];
+                const sampleKey = `${presetGens.index}:${instGens.index}`;
 
-        for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
-            let inputSample: number = 0;
+                if (!currSample || !sInfo)
+                    continue;
 
-            if (canLoop && phase >= loopEnd) {
-                phase = loopStart + ((phase - loopStart) % loopRange);
+                let originalPitch = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.overridingRootKey.op)
+                    ?? sInfo.originalPitch;
+                const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.coarseTune.op);
+                const pitchCorrectionFine = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.fineTune.op);
+                const scaleTuning = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.scaleTuning.op);
+                originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
+                //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
+                //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
+                const rootFreq = Instrument.frequencyFromPitch(originalPitch - pitchCorrectionCourse - pitchCorrectionFine / 100.0 - sInfo.pCorrection / 100.0);
+                const waveLength = currSample.length;
+                const loopStart = sInfo.loopStart;
+                const loopEnd = sInfo.loopEnd;
+                const loopRange = loopEnd - loopStart;
+                const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;
+                const applyFilters: Function = Synth.applyFilters;
+                //const panAmt: number = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.pan.op);
+
+                let initialFilterInput1: number = (tone.sfInitialNoteFilterInput1.get(sampleKey) ?? 0);
+                let initialFilterInput2: number = (tone.sfInitialNoteFilterInput2.get(sampleKey) ?? 0);
+                const filters: DynamicBiquadFilter[] = tone.noteFilters;
+                const filterCount: number = tone.noteFilterCount | 0;
+                const volumeScale = instrumentState.volumeScale;
+
+                const pitchScale = Math.pow(2, (pitch - originalPitch) * (scaleTuning - 100) / 1200);
+                const sampleRateScale = sInfo.sampleRate / rootFreq;
+                let phase: number = (tone.sfPhases.get(sampleKey) ?? 0) * waveLength;
+                let phaseDelta: number = tone.phaseDeltas[0] * sampleRateScale * pitchScale;
+
+                const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
+                const stopIndex: number = bufferIndex + roundedSamplesPerTick;
+
+                for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+                    let inputSample: number = 0;
+
+                    if (canLoop && phase >= loopEnd) {
+                        phase = loopStart + ((phase - loopStart) % loopRange);
+                    }
+
+                    inputSample = readSample(phase, currSample, canLoop, loopEnd, loopStart);
+
+                    const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
+                    const output: number = sample * layerExpression;
+
+                    data[sampleIndex] += output;
+
+                    initialFilterInput2 = initialFilterInput1;
+                    initialFilterInput1 = inputSample * volumeScale;
+
+                    phase += phaseDelta;
+                    phaseDelta *= phaseDeltaScale;
+                    layerExpression += expressionDelta;
+                }
+
+                tone.sfPhases.set(sampleKey, phase / waveLength);
+
+                synth.sanitizeFilters(filters);
+                tone.sfInitialNoteFilterInput1.set(sampleKey, initialFilterInput1);
+                tone.sfInitialNoteFilterInput2.set(sampleKey, initialFilterInput1);
             }
-            
-            inputSample = readSample(phase);
-
-            const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
-            const output: number = sample * expression;
-            
-            data[sampleIndex] += output
-            
-            initialFilterInput2 = initialFilterInput1;
-            initialFilterInput1 = inputSample * volumeScale;
-
-            phase += phaseDelta;
-            phaseDelta *= phaseDeltaScale;
-            expression += expressionDelta;
         }
-
-        tone.phases[0] = phase / waveLength;
-        tone.phaseDeltas[0] = phaseDelta * rootFreq / sInfo.sampleRate / Math.pow(2, (tone.pitches[0] - originalPitch) * (scaleTuning - 100) / 1200);;
-        tone.expression = expression;
-
-        synth.sanitizeFilters(filters);
-        tone.initialNoteFilterInput1 = initialFilterInput1;
-        tone.initialNoteFilterInput2 = initialFilterInput2;
+        
+        tone.expression += expressionDelta * roundedSamplesPerTick;
     }
 
     private static chipSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
