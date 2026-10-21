@@ -7968,10 +7968,10 @@ class InstrumentState {
             let panStart: number = Math.max(-1.0, Math.min(1.0, (usePanStart - Config.panCenter) / Config.panCenter /** panEnvelopeStart*/));
             let panEnd: number = Math.max(-1.0, Math.min(1.0, (usePanEnd - Config.panCenter) / Config.panCenter /** panEnvelopeEnd  */));
 
-            const volumeStartL: number = Math.cos((1 + panStart) * Math.PI * 0.25) * 1.414;
-            const volumeStartR: number = Math.cos((1 - panStart) * Math.PI * 0.25) * 1.414;
-            const volumeEndL: number = Math.cos((1 + panEnd) * Math.PI * 0.25) * 1.414;
-            const volumeEndR: number = Math.cos((1 - panEnd) * Math.PI * 0.25) * 1.414;
+            const volumeStartL: number = Math.cos((1 + panStart) * Math.PI * 0.25) * Math.SQRT2;
+            const volumeStartR: number = Math.cos((1 - panStart) * Math.PI * 0.25) * Math.SQRT2;
+            const volumeEndL: number = Math.cos((1 + panEnd) * Math.PI * 0.25) * Math.SQRT2;
+            const volumeEndR: number = Math.cos((1 - panEnd) * Math.PI * 0.25) * Math.SQRT2;
             const maxDelaySamples: number = samplesPerSecond * Config.panDelaySecondsMax;
 
             let usePanDelayStart: number = instrument.panDelay;
@@ -11563,9 +11563,29 @@ export class Synth {
             throw new Error("Unrecognized instrument type: " + instrument.type);
         }
     }
-        static wrap(x: number, b: number): number {
-            return (x % b + b) % b;
+    static wrap(x: number, b: number): number {
+        return (x % b + b) % b;
+    }
+    static interpolateSample = (phase: number, sample: Float32Array, canLoop: boolean = false, loopEnd: number = 0, loopStart: number = 0): number => {
+        let index = Math.floor(phase);
+        let nextIndex = index + 1;
+        const fraction = phase - index;
+        const loopLength = loopEnd - loopStart;
+        let a = 0;
+        let b = 0;
+
+        if (canLoop) {
+            index = (index < loopEnd) ? index : loopStart + ((index - loopStart) % loopLength);
+            nextIndex = (nextIndex < loopEnd) ? nextIndex : loopStart + ((nextIndex - loopStart) % loopLength);
+            a = sample[index];
+            b = sample[nextIndex];
+        } else {
+            a = (index < loopEnd) ? sample[index] : 0;
+            b = (nextIndex < loopEnd) ? sample[nextIndex] : a;
         }
+
+        return a + (b - a) * fraction;
+    }
         static loopableChipSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
             // @TODO:
             // - Longer declicking? This is more difficult than I thought.
@@ -11640,16 +11660,8 @@ export class Synth {
             let prevWaveIntegralA: number = 0;
             let prevWaveIntegralB: number = 0;
             if (!aliases) {
-                const phaseAInt = Math.floor(phaseA);
-                const phaseBInt = Math.floor(phaseB);
-                const indexA = Synth.wrap(phaseAInt, waveLength);
-               const indexB = Synth.wrap(phaseBInt, waveLength);
-                const phaseRatioA = phaseA - phaseAInt;
-                const phaseRatioB = phaseB - phaseBInt;
-                prevWaveIntegralA = +wave[indexA];
-                prevWaveIntegralB = +wave[indexB];
-                prevWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - prevWaveIntegralA) * phaseRatioA;
-                prevWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - prevWaveIntegralB) * phaseRatioB;
+                prevWaveIntegralA = Synth.interpolateSample(phaseA, wave, true, waveLength);
+                prevWaveIntegralB = Synth.interpolateSample(phaseB, wave, true, waveLength);
            }
             const filters = tone.noteFilters;
             const filterCount: number = tone.noteFilterCount | 0;
@@ -11825,18 +11837,10 @@ export class Synth {
                     }
                 }
                 else {
-                    const phaseAInt = Math.floor(phaseA);
-                    const phaseBInt = Math.floor(phaseB);
-                    const indexA = Synth.wrap(phaseAInt, waveLength);
-                    const indexB = Synth.wrap(phaseBInt, waveLength);
-                    let nextWaveIntegralA = wave[indexA];
-                    let nextWaveIntegralB = wave[indexB];
-                    const phaseRatioA = phaseA - phaseAInt;
-                    const phaseRatioB = phaseB - phaseBInt;
-                    nextWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - nextWaveIntegralA) * phaseRatioA;
-                    nextWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - nextWaveIntegralB) * phaseRatioB;
+                    let nextWaveIntegralA: number = Synth.interpolateSample(phaseA, wave, true, waveLength);
+                    let nextWaveIntegralB: number = Synth.interpolateSample(phaseB, wave, true, waveLength);
                     if (!(chipWaveLoopMode === 0 && chipWaveLoopStart === 0 && chipWaveLoopEnd === waveLength) && wrapped !== 0) {
-                        let pwia = 0;
+                        let pwia = 0; //this has to do with directions so it wont use interpolateSample
                         let pwib = 0;
                         const phaseA_ = Math.max(0, phaseA - phaseDeltaA * directionA);
                         const phaseB_ = Math.max(0, phaseB - phaseDeltaB * directionB);
@@ -11919,22 +11923,6 @@ export class Synth {
         const expressionDelta: number = +tone.expressionDelta;
         const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 
-        //originally here because i attepted crossfading, but... nice to have, i guess!
-        //it's linear interpolation, to make it smooth across different speeds.
-        const readSample = (position: number, currSample: Float32Array, canLoop: boolean, loopEnd: number, loopStart: number): number => {
-            const index = Math.floor(position);
-            const fraction = position - index;
-            const a = currSample[index] ?? 0;
-            let nextIndex = index + 1;
-
-            if (canLoop && nextIndex >= loopEnd)
-                nextIndex = loopStart;
-
-            const b = currSample[nextIndex] ?? a;
-
-            return a + (b - a) * fraction;
-        };
-
         for (const presetGens of gens) { //one sample can have multiple presetZones and instrumentZones, so we gotta do this
             const currInstGens = (presetGens.instGenerators.length > 0) ? presetGens.instGenerators : null;
             if (!currInstGens) continue;
@@ -11955,15 +11943,13 @@ export class Synth {
                     ?? sInfo.originalPitch;
                 const pitchCorrectionCourse = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.coarseTune.op);
                 const pitchCorrectionFine = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.fineTune.op);
-                const scaleTuning = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.scaleTuning.op);
                 originalPitch = (originalPitch == 65535) ? sInfo.originalPitch : originalPitch;
-                //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
-                //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
+                    //so, this wasnt working, so i tried just subtracting the pitch corrections and it..... worked???
+                    //honestly, no idea why. i mean, some idea why, but i couldn't say for sure...
                 const rootFreq = Instrument.frequencyFromPitch(originalPitch - pitchCorrectionCourse - pitchCorrectionFine / 100.0 - sInfo.pCorrection / 100.0);
                 const waveLength = currSample.length;
-                const loopStart = sInfo.loopStart;
-                const loopEnd = sInfo.loopEnd;
-                const loopRange = loopEnd - loopStart;
+                const loopStart = sInfo.loopStart + Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.startloopAddrsOffset.op);
+                const loopEnd = sInfo.loopEnd + Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.endloopAddrsOffset.op);
                 const canLoop = (loopMode === 1 || loopMode === 3) && loopStart >= 0 && loopEnd > loopStart && loopEnd <= waveLength;
                 const applyFilters: Function = Synth.applyFilters;
 
@@ -11973,36 +11959,31 @@ export class Synth {
                 const filterCount: number = tone.noteFilterCount | 0;
                 const volumeScale = instrumentState.volumeScale;
 
+                const scaleTuning = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.scaleTuning.op);
                 const pitchScale = Math.pow(2, (pitch - originalPitch) * (scaleTuning - 100) / 1200);
                 const sampleRateScale = sInfo.sampleRate / rootFreq;
-                let phase: number = (tone.sfPhases.get(sampleKey) ?? 0) * waveLength;
-                let phaseDelta: number = tone.phaseDeltas[0] * sampleRateScale * pitchScale;
+                const startOffset: number = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.startAddrsOffset.op);
+                //const endOffset: number = Math.min(0, Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.endAddrsOffset.op)) //dont wanna do this if it's larger than 0. should always be negative
+                const panAmt: number = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.pan.op);
+                const attenuationScale: number = Math.pow(10, -Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.initialAttenuation.op) / 200);
 
+                let phase: number = (tone.sfPhases.get(sampleKey) ?? startOffset / waveLength ) * waveLength;
+                let phaseDelta: number = tone.phaseDeltas[0] * sampleRateScale * pitchScale;
                 const dataL: Float32Array = synth.tempInstrumentSampleBufferL;
                 const dataR: Float32Array = synth.tempInstrumentSampleBufferR;
                 const stopIndex: number = bufferIndex + roundedSamplesPerTick;
 
-                const panAmt: number = Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.pan.op);
-                const attenuationScale: number = Math.pow(10, -Soundfont.getGenAmtFromOp(instGens, presetGens, GENERATORS.initialAttenuation.op)/200)
-
                 for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
                     let inputSample: number = 0;
 
-                    if (canLoop && phase >= loopEnd) {
-                        phase = loopStart + ((phase - loopStart) % loopRange);
-                    }
-
-                    inputSample = readSample(phase, currSample, canLoop, loopEnd, loopStart);
+                    inputSample = Synth.interpolateSample(phase, currSample, canLoop, loopEnd, loopStart);
 
                     const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
                     const output: number = sample * layerExpression * attenuationScale;
 
-                    //equal-power curve
-                    const pan = Math.max(-500, Math.min(500, panAmt)) / 500;
-                    const angle = (pan + 1) * Math.PI / 4;
-
-                    dataL[sampleIndex] += output * Math.cos(angle) / Math.cos(Math.PI/4);
-                    dataR[sampleIndex] += output * Math.sin(angle) / Math.cos(Math.PI / 4);
+                    //equal-power curve for panning
+                    dataL[sampleIndex] += output * Math.cos((panAmt / 500 + 1) * Math.PI * 0.25) * Math.SQRT2;
+                    dataR[sampleIndex] += output * Math.cos((panAmt / 500 - 1) * Math.PI * 0.25) * Math.SQRT2;
 
                     initialFilterInput2 = initialFilterInput1;
                     initialFilterInput1 = inputSample * volumeScale;
@@ -12052,16 +12033,8 @@ export class Synth {
         let prevWaveIntegralB: number = 0;
 
         if (!aliases) {
-            const phaseAInt: number = phaseA | 0;
-            const phaseBInt: number = phaseB | 0;
-            const indexA: number = phaseAInt % waveLength;
-            const indexB: number = phaseBInt % waveLength;
-            const phaseRatioA: number = phaseA - phaseAInt;
-            const phaseRatioB: number = phaseB - phaseBInt;
-            prevWaveIntegralA = +wave[indexA];
-            prevWaveIntegralB = +wave[indexB];
-            prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
-            prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
+            prevWaveIntegralA = Synth.interpolateSample(phaseA, wave, true, waveLength);
+            prevWaveIntegralB = Synth.interpolateSample(phaseB, wave, true, waveLength);
         }
 
         const stopIndex: number = bufferIndex + roundedSamplesPerTick;
@@ -12079,16 +12052,8 @@ export class Synth {
                 waveB = wave[(0 | phaseB) % waveLength];
                 inputSample = waveA + waveB;
             } else {
-                const phaseAInt: number = phaseA | 0;
-                const phaseBInt: number = phaseB | 0;
-                const indexA: number = phaseAInt % waveLength;
-                const indexB: number = phaseBInt % waveLength;
-                let nextWaveIntegralA: number = wave[indexA];
-                let nextWaveIntegralB: number = wave[indexB];
-                const phaseRatioA: number = phaseA - phaseAInt;
-                const phaseRatioB: number = phaseB - phaseBInt;
-                nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
-                nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
+                let nextWaveIntegralA: number = Synth.interpolateSample(phaseA, wave, true, waveLength);
+                let nextWaveIntegralB: number = Synth.interpolateSample(phaseB, wave, true, waveLength);
                 waveA = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
                 waveB = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
                 prevWaveIntegralA = nextWaveIntegralA;
@@ -12144,16 +12109,8 @@ export class Synth {
         let initialFilterInput2: number = +tone.initialNoteFilterInput2;
         const applyFilters: Function = Synth.applyFilters;
 
-        const phaseAInt: number = phaseA | 0;
-        const phaseBInt: number = phaseB | 0;
-        const indexA: number = phaseAInt % waveLength;
-        const indexB: number = phaseBInt % waveLength;
-        const phaseRatioA: number = phaseA - phaseAInt;
-        const phaseRatioB: number = phaseB - phaseBInt;
-        let prevWaveIntegralA: number = +wave[indexA];
-        let prevWaveIntegralB: number = +wave[indexB];
-        prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
-        prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
+        let prevWaveIntegralA: number = Synth.interpolateSample(phaseA, wave, true, waveLength);
+        let prevWaveIntegralB: number = Synth.interpolateSample(phaseB, wave, true, waveLength);
 
         const stopIndex: number = bufferIndex + roundedSamplesPerTick;
         for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
@@ -12161,16 +12118,8 @@ export class Synth {
             phaseA += phaseDeltaA;
             phaseB += phaseDeltaB;
 
-            const phaseAInt: number = phaseA | 0;
-            const phaseBInt: number = phaseB | 0;
-            const indexA: number = phaseAInt % waveLength;
-            const indexB: number = phaseBInt % waveLength;
-            let nextWaveIntegralA: number = wave[indexA];
-            let nextWaveIntegralB: number = wave[indexB];
-            const phaseRatioA: number = phaseA - phaseAInt;
-            const phaseRatioB: number = phaseB - phaseBInt;
-            nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
-            nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
+            let nextWaveIntegralA: number = Synth.interpolateSample(phaseA, wave, true, waveLength);
+            let nextWaveIntegralB: number = Synth.interpolateSample(phaseB, wave, true, waveLength);;
             const waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
             const waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
             prevWaveIntegralA = nextWaveIntegralA;
@@ -13392,7 +13341,7 @@ export class Synth {
         for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
             const phaseAInt: number = phaseA | 0;
 			const phaseBInt: number = phaseB | 0;
-            const indexA: number = phaseAInt & phaseMask;
+            const indexA: number = phaseAInt & phaseMask; //wont use interpolateSample here since it uses masking
 			const indexB: number = phaseBInt & phaseMask;
             let waveSampleA: number = wave[indexA];
 			let waveSampleB: number = wave[indexB];
