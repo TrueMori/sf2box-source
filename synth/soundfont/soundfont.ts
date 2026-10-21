@@ -671,6 +671,9 @@ export class Soundfont {
         
         //Get generators of each type
         const globalPresetGens = new Map<number, number>(); //global preset gens
+        if (!preset) {
+            return [];
+        }
         preset.globalGens.forEach((gen) => globalPresetGens.set(gen.op, gen.amt));
         let pZoneIndex = 0;
         for (const pZone of preset.presetZones) {
