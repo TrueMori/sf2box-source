@@ -11974,9 +11974,7 @@ export class Synth {
                 const stopIndex: number = bufferIndex + roundedSamplesPerTick;
 
                 for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
-                    let inputSample: number = 0;
-
-                    let index = Math.floor(phase);
+                    let index = phase | 0; //sample interpolation
                     let nextIndex = index + 1;
                     const fraction = phase - index;
                     const loopLength = loopEnd - loopStart;
@@ -11988,11 +11986,10 @@ export class Synth {
                         a = currSample[index];
                         b = currSample[nextIndex];
                     } else {
-                        a = (index < loopEnd) ? currSample[index] : 0;
-                        b = (nextIndex < loopEnd) ? currSample[nextIndex] : a;
+                        a = (index < currSample.length) ? currSample[index] : 0;
+                        b = (nextIndex < currSample.length) ? currSample[nextIndex] : a;
                     }
-                    inputSample = a + (b - a) * fraction;
-
+                    const inputSample = a + (b - a) * fraction;
                     const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
                     const output: number = sample * layerExpression * attenuationScale;
 
@@ -12005,6 +12002,7 @@ export class Synth {
 
                     phase += phaseDelta;
                     phaseDelta *= phaseDeltaScale;
+
                     layerExpression += expressionDelta;
                 }
 
