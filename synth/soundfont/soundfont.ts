@@ -663,10 +663,9 @@ export class Soundfont {
     //Then, in each presetGenerator, we get the instrumentZoneGenerators, which is the same, but it also resolves instrument and preset generators.
     //We still want them seperate, but having already accounted for everything at each level makes the other code a lot easier to read.
     public static getGeneratorsOfLevelsFromMidiPitch(soundfontIndex: number, presetIndex: number, pitch: number): PresetGenerators[] {
-        //generators suck like damn
         const generators: PresetGenerators[] = [];
-
         const sf = Soundfont.loadedSoundfonts[soundfontIndex];
+        if (!sf) return [];
         const preset = sf.presets[presetIndex];
         
         //Get generators of each type

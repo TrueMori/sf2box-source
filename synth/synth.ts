@@ -11594,8 +11594,9 @@ export class Synth {
         const index = Math.floor(phase % waveLength)
         const nextIndex = (index + 1) % waveLength;
         const fraction = (phase % waveLength) - (index);
+        const a = sample[index];
 
-        return sample[index] + (sample[nextIndex] - sample[index]) * fraction;
+        return a + (sample[nextIndex] - a) * fraction;
     }
 
         static loopableChipSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
