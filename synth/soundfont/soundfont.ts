@@ -6,7 +6,7 @@
 // Page 7 denotes data types, page 16 gives an overview to the whole structure
 // Soundfonts use the RIFF file structure.
 
-import { Dictionary, performIntegral } from "../SynthConfig"
+import { Dictionary, performIntegral, SampleLoadedEvent, sampleLoadEvents, sampleLoadingState, SampleLoadingStatus } from "../SynthConfig"
 
 enum sampleMode { //loop types
     noLoop,
@@ -218,14 +218,24 @@ export class Soundfont {
     }
 
     //TODO: make the doc parameter not any, right now its a circular dependancy
-    public static async loadSoundfont(url: string, sfIndex: number, doc: any): Promise<Soundfont> {
+    public static async loadSoundfont(url: string, sfIndex: number, chipWaveIndex: number): Promise<Soundfont> {
+        if (OFFLINE) if (OFFLINE) {
+            if (url.slice(0, 5) === "file:") {
+                const dirname = await getDirname();
+                const joined = await pathJoin(dirname, url.slice(5));
+                url = joined;
+            }
+        }
         return fetch(url).then((response) => {
             //console.log("Fetching "+url+"...");
             if (!response.ok) {
-                return Promise.reject(new Error("Couldn't load sf2."));
+                sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.error;
+                return Promise.reject(new Error("Couldn't load soundfont"));
             }
             return response.arrayBuffer();
         }).then((arrayBuffer) => {
+            sampleLoadingState.samplesLoaded++;
+            sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading
             //console.log("Loading "+url+". Size of data: " + arrayBuffer.byteLength + " bytes.");
             let name: string = "";
             let presets: Preset[] = [];
@@ -412,7 +422,14 @@ export class Soundfont {
                         break;
 
                     default:
-                        return Promise.reject("Bad SF2 file.");
+                        sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.error;
+                        sampleLoadingState.samplesFailed++;
+                        sampleLoadEvents.dispatchEvent(new SampleLoadedEvent(
+                            sampleLoadingState.totalSamples,
+                            sampleLoadingState.samplesLoaded,
+                            sampleLoadingState.samplesFailed
+                        ));
+                        console.log("Failed to load " + url + ":\n" + "Bad soundfont file.");
                 }
                 
             }
@@ -504,10 +521,15 @@ export class Soundfont {
             //Construct soundfont from data
             const success = new Soundfont(name, presets, chipWaves, rawChipWaves, rawRawChipWaves, sampleInfo, url, true);
             this.loadedSoundfonts[sfIndex] = success;
-            //console.log("Loading successful!: ", success);
+            console.log("Loading successful!: ", success);
             
-            // TODO: Make this a bit more specific
-            doc.notifier.changed();
+            sampleLoadingState.samplesLoaded++;
+            sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loaded;
+            sampleLoadEvents.dispatchEvent(new SampleLoadedEvent(
+                sampleLoadingState.totalSamples,
+                sampleLoadingState.samplesLoaded,
+                sampleLoadingState.samplesFailed
+            ));
             return success;
         });
     }

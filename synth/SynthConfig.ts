@@ -418,42 +418,6 @@ export async function startLoadingSample(url: string, chipWaveIndex: number, pre
     });
 }
 
-export async function startLoadingSoundfont(url: string, chipWaveIndex: number): Promise<void> {
-    if (OFFLINE) {
-        if (url.slice(0, 5) === "file:") {
-            const dirname = await getDirname();
-            const joined = await pathJoin(dirname, url.slice(5));
-            url = joined;
-        }
-    }
-    fetch(url).then((response) => {
-	if (!response.ok) {
-	    // @TODO: Be specific with the error handling.
-	    sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.error;
-	    return Promise.reject(new Error("Couldn't load soundfont"));
-	}
-	return response.arrayBuffer();
-    }).then(() => {
-	sampleLoadingState.samplesLoaded++;
-	sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loaded;
-	sampleLoadEvents.dispatchEvent(new SampleLoadedEvent(
-	    sampleLoadingState.totalSamples,
-	    sampleLoadingState.samplesLoaded,
-        sampleLoadingState.samplesFailed
-	));
-    }).catch((error) => {
-	//console.error(error);
-	sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.error;
-    sampleLoadingState.samplesFailed++;
-    sampleLoadEvents.dispatchEvent(new SampleLoadedEvent(
-	    sampleLoadingState.totalSamples,
-	    sampleLoadingState.samplesLoaded,
-        sampleLoadingState.samplesFailed
-	));
-	console.log("Failed to load " + url + ":\n" + error);
-    });
-}
-
 export function getLocalStorageItem<T>(key: string, defaultValue: T): T | string {
     let value: T | string | null = localStorage.getItem(key);
     if (value == null || value === "null" || value === "undefined") {

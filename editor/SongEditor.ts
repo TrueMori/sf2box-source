@@ -2625,6 +2625,7 @@ export class SongEditor {
 
                 // Repopulate soundfont dropdown.
                 this._soundfontDropdown.replaceChildren();
+                console.log(Soundfont.loadedSoundfonts);
                 for (let i = 0; i < Soundfont.loadedSoundfonts.length; i++) {
                     this._soundfontDropdown.appendChild(option({ value: i }, Soundfont.loadedSoundfonts[i].name));
                 }

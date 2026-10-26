@@ -9,7 +9,6 @@ import {NotePin, Note, Pattern, Instrument, Channel, Song, Synth} from "../synth
 import {SongDocument} from "./SongDocument";
 import {ExportPrompt} from "./ExportPrompt";
 import {ChangePreset} from "./changes";
-import { Soundfont } from "../synth/soundfont/soundfont";
 import "select2";
 
 
@@ -121,16 +120,6 @@ editor.updatePlayButton();
 if ("serviceWorker" in navigator) {
 		navigator.serviceWorker.register("/service_worker.js", {updateViaCache: "all", scope: "/"}).catch(() => {});
 }
-
-// TEMPORARY CODE TO TEST SOUNDFONT FUNCTIONALITY //
-for (let i = 0; i < Soundfont.soundfontURLS.length; i++) {
-	// Temporary soundfont before it actually loads to populate it.
-	Soundfont.loadedSoundfonts[i] = Soundfont.placeholderSoundfont();
-}
-for (let i = 0; i < Soundfont.soundfontURLS.length; i++) {
-	Soundfont.loadSoundfont(Soundfont.soundfontURLS[i], i, doc);
-}
-// TEMP //
 
 // When compiling synth.ts as a standalone module named "beepbox", expose these classes as members to JavaScript:
 	export {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, NotePin, Note, Pattern, Instrument, Channel, Song, Synth, ColorConfig, EditorConfig, SongDocument, SongEditor, ExportPrompt, ChangePreset};
