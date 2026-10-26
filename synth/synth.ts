@@ -11568,37 +11568,6 @@ export class Synth {
         return (x % b + b) % b;
     }
 
-    static interpolateSample = (phase: number, sample: Float32Array, canLoop: boolean = false, loopEnd: number = 0, loopStart: number = 0): number => {
-        let index = Math.floor(phase);
-        let nextIndex = index + 1;
-        const fraction = phase - index;
-        const loopLength = loopEnd - loopStart;
-        let a = 0;
-        let b = 0;
-
-        if (canLoop) {
-            index = (index < loopEnd) ? index : loopStart + ((index - loopStart) % loopLength);
-            nextIndex = (nextIndex < loopEnd) ? nextIndex : loopStart + ((nextIndex - loopStart) % loopLength);
-            a = sample[index];
-            b = sample[nextIndex];
-        } else {
-            a = (index < loopEnd) ? sample[index] : 0;
-            b = (nextIndex < loopEnd) ? sample[nextIndex] : a;
-        }
-
-        return a + (b - a) * fraction;
-    }
-
-    static interpolateChipwave = (phase: number, sample: Float32Array): number => {
-        const waveLength = sample.length;
-        const index = Math.floor(phase % waveLength)
-        const nextIndex = (index + 1) % waveLength;
-        const fraction = (phase % waveLength) - (index);
-        const a = sample[index];
-
-        return a + (sample[nextIndex] - a) * fraction;
-    }
-
         static loopableChipSynth(synth: Synth, bufferIndex: number, roundedSamplesPerTick: number, tone: Tone, instrumentState: InstrumentState): void {
             // @TODO:
             // - Longer declicking? This is more difficult than I thought.
@@ -11673,18 +11642,16 @@ export class Synth {
             let prevWaveIntegralA: number = 0;
             let prevWaveIntegralB: number = 0;
             if (!aliases) {
-                // const phaseAInt = Math.floor(phaseA);
-                // const phaseBInt = Math.floor(phaseB);
-                // const indexA = Synth.wrap(phaseAInt, waveLength);
-                // const indexB = Synth.wrap(phaseBInt, waveLength);
-                // const phaseRatioA = phaseA - phaseAInt;
-                // const phaseRatioB = phaseB - phaseBInt;
-                // prevWaveIntegralA = +wave[indexA];
-                // prevWaveIntegralB = +wave[indexB];
-                // prevWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - prevWaveIntegralA) * phaseRatioA;
-                // prevWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - prevWaveIntegralB) * phaseRatioB;
-                prevWaveIntegralA = Synth.interpolateChipwave(phaseA, wave);
-                prevWaveIntegralB = Synth.interpolateChipwave(phaseB, wave);
+                const phaseAInt = Math.floor(phaseA);
+                const phaseBInt = Math.floor(phaseB);
+                const indexA = Synth.wrap(phaseAInt, waveLength);
+                const indexB = Synth.wrap(phaseBInt, waveLength);
+                const phaseRatioA = phaseA - phaseAInt;
+                const phaseRatioB = phaseB - phaseBInt;
+                prevWaveIntegralA = +wave[indexA];
+                prevWaveIntegralB = +wave[indexB];
+                prevWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - prevWaveIntegralA) * phaseRatioA;
+                prevWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - prevWaveIntegralB) * phaseRatioB;
            }
             const filters = tone.noteFilters;
             const filterCount: number = tone.noteFilterCount | 0;
@@ -11860,20 +11827,18 @@ export class Synth {
                     }
                 }
                 else {
-                    // const phaseAInt = Math.floor(phaseA);
-                    // const phaseBInt = Math.floor(phaseB);
-                    // const indexA = Synth.wrap(phaseAInt, waveLength);
-                    // const indexB = Synth.wrap(phaseBInt, waveLength);
-                    // let nextWaveIntegralA = wave[indexA];
-                    // let nextWaveIntegralB = wave[indexB];
-                    // const phaseRatioA = phaseA - phaseAInt;
-                    // const phaseRatioB = phaseB - phaseBInt;
-                    // nextWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - nextWaveIntegralA) * phaseRatioA;
-                    // nextWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - nextWaveIntegralB) * phaseRatioB;
-                    let nextWaveIntegralA = Synth.interpolateChipwave(phaseA, wave);
-                    let nextWaveIntegralB = Synth.interpolateChipwave(phaseB, wave);
+                    const phaseAInt = Math.floor(phaseA);
+                    const phaseBInt = Math.floor(phaseB);
+                    const indexA = Synth.wrap(phaseAInt, waveLength);
+                    const indexB = Synth.wrap(phaseBInt, waveLength);
+                    let nextWaveIntegralA = wave[indexA];
+                    let nextWaveIntegralB = wave[indexB];
+                    const phaseRatioA = phaseA - phaseAInt;
+                    const phaseRatioB = phaseB - phaseBInt;
+                    nextWaveIntegralA += (wave[Synth.wrap(indexA + 1, waveLength)] - nextWaveIntegralA) * phaseRatioA;
+                    nextWaveIntegralB += (wave[Synth.wrap(indexB + 1, waveLength)] - nextWaveIntegralB) * phaseRatioB;
                     if (!(chipWaveLoopMode === 0 && chipWaveLoopStart === 0 && chipWaveLoopEnd === waveLength) && wrapped !== 0) {
-                        let pwia = 0; //not touching this with interpolateChipwave because of it's directionality
+                        let pwia = 0;
                         let pwib = 0;
                         const phaseA_ = Math.max(0, phaseA - phaseDeltaA * directionA);
                         const phaseB_ = Math.max(0, phaseB - phaseDeltaB * directionB);
@@ -12009,10 +11974,22 @@ export class Synth {
                 const stopIndex: number = bufferIndex + roundedSamplesPerTick;
 
                 for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
-                    let inputSample: number = 0;
-
-                    inputSample = Synth.interpolateSample(phase, currSample, canLoop, loopEnd, loopStart);
-
+                    let index = phase | 0; //sample interpolation
+                    let nextIndex = index + 1;
+                    const fraction = phase - index;
+                    const loopLength = loopEnd - loopStart;
+                    let a = 0;
+                    let b = 0;
+                    if (canLoop) {
+                        index = (index < loopEnd) ? index : loopStart + ((index - loopStart) % loopLength);
+                        nextIndex = (nextIndex < loopEnd) ? nextIndex : loopStart + ((nextIndex - loopStart) % loopLength);
+                        a = currSample[index];
+                        b = currSample[nextIndex];
+                    } else {
+                        a = (index < currSample.length) ? currSample[index] : 0;
+                        b = (nextIndex < currSample.length) ? currSample[nextIndex] : a;
+                    }
+                    const inputSample = a + (b - a) * fraction;
                     const sample = applyFilters(inputSample * volumeScale, initialFilterInput1, initialFilterInput2, filterCount, filters);
                     const output: number = sample * layerExpression * attenuationScale;
 
@@ -12025,6 +12002,7 @@ export class Synth {
 
                     phase += phaseDelta;
                     phaseDelta *= phaseDeltaScale;
+
                     layerExpression += expressionDelta;
                 }
 
@@ -12068,18 +12046,16 @@ export class Synth {
         let prevWaveIntegralB: number = 0;
 
         if (!aliases) {
-            // const phaseAInt: number = phaseA | 0;
-            // const phaseBInt: number = phaseB | 0;
-            // const indexA: number = phaseAInt % waveLength;
-            // const indexB: number = phaseBInt % waveLength;
-            // const phaseRatioA: number = phaseA - phaseAInt;
-            // const phaseRatioB: number = phaseB - phaseBInt;
-            // prevWaveIntegralA = +wave[indexA];
-            // prevWaveIntegralB = +wave[indexB];
-            // prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
-            // prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
-            prevWaveIntegralA = Synth.interpolateChipwave(phaseA, wave);
-            prevWaveIntegralB = Synth.interpolateChipwave(phaseB, wave);
+            const phaseAInt: number = phaseA | 0;
+            const phaseBInt: number = phaseB | 0;
+            const indexA: number = phaseAInt % waveLength;
+            const indexB: number = phaseBInt % waveLength;
+            const phaseRatioA: number = phaseA - phaseAInt;
+            const phaseRatioB: number = phaseB - phaseBInt;
+            prevWaveIntegralA = +wave[indexA];
+            prevWaveIntegralB = +wave[indexB];
+            prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
+            prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
         }
 
         const stopIndex: number = bufferIndex + roundedSamplesPerTick;
@@ -12097,18 +12073,16 @@ export class Synth {
                 waveB = wave[(0 | phaseB) % waveLength];
                 inputSample = waveA + waveB;
             } else {
-                // const phaseAInt: number = phaseA | 0;
-                // const phaseBInt: number = phaseB | 0;
-                // const indexA: number = phaseAInt % waveLength;
-                // const indexB: number = phaseBInt % waveLength;
-                // let nextWaveIntegralA: number = wave[indexA];
-                // let nextWaveIntegralB: number = wave[indexB];
-                // const phaseRatioA: number = phaseA - phaseAInt;
-                // const phaseRatioB: number = phaseB - phaseBInt;
-                // nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
-                // nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
-                let nextWaveIntegralA: number = Synth.interpolateSample(phaseA, wave, true, waveLength);
-                let nextWaveIntegralB: number = Synth.interpolateSample(phaseB, wave, true, waveLength);
+                const phaseAInt: number = phaseA | 0;
+                const phaseBInt: number = phaseB | 0;
+                const indexA: number = phaseAInt % waveLength;
+                const indexB: number = phaseBInt % waveLength;
+                let nextWaveIntegralA: number = wave[indexA];
+                let nextWaveIntegralB: number = wave[indexB];
+                const phaseRatioA: number = phaseA - phaseAInt;
+                const phaseRatioB: number = phaseB - phaseBInt;
+                nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
+                nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
                 waveA = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
                 waveB = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
                 prevWaveIntegralA = nextWaveIntegralA;
@@ -12181,22 +12155,16 @@ export class Synth {
             phaseA += phaseDeltaA;
             phaseB += phaseDeltaB;
 
-            // const phaseAInt: number = phaseA | 0;
-            // const phaseBInt: number = phaseB | 0;
-            // const indexA: number = phaseAInt % waveLength;
-            // const indexB: number = phaseBInt % waveLength;
-            // let nextWaveIntegralA: number = wave[indexA];
-            // let nextWaveIntegralB: number = wave[indexB];
-            // const phaseRatioA: number = phaseA - phaseAInt;
-            // const phaseRatioB: number = phaseB - phaseBInt;
-            // nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
-            // nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
-            // const waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
-            // const waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
-            // prevWaveIntegralA = nextWaveIntegralA;
-            // prevWaveIntegralB = nextWaveIntegralB;
-            let nextWaveIntegralA: number = Synth.interpolateChipwave(phaseA, wave);
-            let nextWaveIntegralB: number = Synth.interpolateChipwave(phaseB, wave);
+            const phaseAInt: number = phaseA | 0;
+            const phaseBInt: number = phaseB | 0;
+            const indexA: number = phaseAInt % waveLength;
+            const indexB: number = phaseBInt % waveLength;
+            let nextWaveIntegralA: number = wave[indexA];
+            let nextWaveIntegralB: number = wave[indexB];
+            const phaseRatioA: number = phaseA - phaseAInt;
+            const phaseRatioB: number = phaseB - phaseBInt;
+            nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
+            nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
             const waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
             const waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
             prevWaveIntegralA = nextWaveIntegralA;
