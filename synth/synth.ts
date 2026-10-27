@@ -3824,7 +3824,7 @@ export class Song {
             compressed = compressed.replaceAll("%7C", "|")
                 var compressed_array = compressed.split("|");
                 compressed = compressed_array.shift()!;
-                if(EditorConfig.customSamples == null || EditorConfig.customSamples.join(", ") != compressed_array.join(", ")) {
+                if (EditorConfig.customSamples == null && compressed_array.length > 0) {
 
                     Song._restoreChipWaveListToDefault();
 
@@ -5863,6 +5863,7 @@ export class Song {
         // This depends on `Config.chipWaves` being the same
         // length as `Config.rawRawChipWaves`.
         const chipWaveIndex: number = Config.chipWaves.length;
+        const sfIndex = Soundfont.loadedSoundfonts.length;
 
         let urlSliced: string = url;
 
@@ -6106,7 +6107,6 @@ export class Song {
                 sampleLoadingState.urlTable[chipWaveIndex] = urlSliced;
                 sampleLoadingState.totalSamples++;
             } else {
-                const sfIndex = Soundfont.loadedSoundfonts.length;
                 Soundfont.loadedSoundfonts[sfIndex] = Soundfont.placeholderSoundfont();
                 Soundfont.loadSoundfont(urlSliced, sfIndex, chipWaveIndex);
                 sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading;
