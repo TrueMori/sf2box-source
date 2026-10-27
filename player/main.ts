@@ -311,7 +311,13 @@ function hashUpdatedExternally(): void {
 	if (myHash.charAt(0) == "#") {
 		myHash = myHash.substring(1);
 	}
-		
+
+	const sampleList = myHash.split("|");
+	sampleList.push();
+	let sampleString = "";
+	sampleList.forEach((sample) => {
+		sampleString += "|" + sample;
+	});
 	
 	fullscreenLink.href = location.href;
 
@@ -325,6 +331,7 @@ function hashUpdatedExternally(): void {
 			let value: string = parameter.substring(equalsIndex + 1);
 			switch (paramName) {
 				case "song":
+					value = value.split("|")[0] + sampleString;
 					loadSong(value, true);
 					if (synth.song) {
 						document.title = synth.song.title + " - " + EditorConfig.versionDisplayName;

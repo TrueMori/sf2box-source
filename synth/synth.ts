@@ -3820,6 +3820,7 @@ export class Song {
         let willLoadLegacySamplesForOldSongs: boolean = false;
 
         if (fromUltraBox || fromGoldBox) {
+            console.log(compressed);
             compressed = compressed.replaceAll("%7C", "|")
                 var compressed_array = compressed.split("|");
                 compressed = compressed_array.shift()!;
@@ -3842,7 +3843,9 @@ export class Song {
                         sampleLoadingState.samplesLoaded,
                         sampleLoadingState.samplesFailed
                     ));
+                    console.log
                     for (const url of compressed_array) {
+                        console.log(url);
                         if (url.toLowerCase() === bundledSamplePacks.legacy) {
                             if (!willLoadLegacySamples) {
                                 willLoadLegacySamples = true;
@@ -3869,6 +3872,7 @@ export class Song {
                             // UB version 2 URLs and below will be using the old syntax, so we do need to parse it in that case.
                             // UB version 3 URLs should only have the new syntax, though, unless the user has edited the URL manually.
                             const parseOldSyntax: boolean = beforeThree;
+                            console.log(customSampleUrls);
                             const ok: boolean = Song._parseAndConfigureCustomSample(url, customSampleUrls, customSamplePresets, sampleLoadingState, parseOldSyntax);
                             if (!ok) {
                                 continue;
@@ -5994,6 +5998,8 @@ export class Song {
         }
 
         if (parsedUrl != null) {
+            console.log(parsedUrl);
+            console.log(urlSliced);
             // Store in the new format.
             if (!urlSliced.includes("sf2")) {
                 let urlWithNamedOptions = urlSliced;
@@ -6105,7 +6111,6 @@ export class Song {
                 sampleLoadingState.totalSamples++;
             } else {
                 const sfIndex = Soundfont.loadedSoundfonts.length;
-                Soundfont.soundfontURLS.push(urlSliced);
                 Soundfont.loadedSoundfonts[sfIndex] = Soundfont.placeholderSoundfont();
                 Soundfont.loadSoundfont(urlSliced, sfIndex, chipWaveIndex);
                 sampleLoadingState.statusTable[chipWaveIndex] = SampleLoadingStatus.loading;
